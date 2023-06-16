@@ -1469,52 +1469,56 @@ function twig_array_batch($items, $size, $fill = null, $preserveKeys = true)
 function twig_get_attribute(Environment $env, Source $source, $object, $item, array $arguments = [], $type = /* Template::ANY_CALL */ 'any', $isDefinedTest = false, $ignoreStrictCheck = false, $sandboxed = false, int $lineno = -1)
 {
     // array
-    if (/* Template::METHOD_CALL */ 'method' !== $type) {
-        $arrayItem = \is_bool($item) || \is_float($item) ? (int) $item : $item;
+    $arrayItem = \is_bool($item) || \is_float($item) ? (int) $item : $item;
 
-        if (((\is_array($object) || $object instanceof \ArrayObject) && (isset($object[$arrayItem]) || \array_key_exists($arrayItem, (array) $object)))
-            || ($object instanceof ArrayAccess && isset($object[$arrayItem]))
-        ) {
-            if ($isDefinedTest) {
-                return true;
-            }
-
-            return $object[$arrayItem];
+    if (((\is_array($object) || $object instanceof \ArrayObject) && (isset($object[$arrayItem]) || \array_key_exists($arrayItem, (array) $object)))
+        || ($object instanceof ArrayAccess && isset($object[$arrayItem]))
+    ) {
+        if ($isDefinedTest) {
+            return true;
         }
 
-        if (/* Template::ARRAY_CALL */ 'array' === $type || !\is_object($object)) {
-            if ($isDefinedTest) {
-                return false;
-            }
+		if ($type === 'method') {
+			if (is_callable($object[$arrayItem])) {
+				return $object[$arrayItem](...$arguments);
+			}
+		} else {
+			return $object[$arrayItem];
+		}
+    }
 
-            if ($ignoreStrictCheck || !$env->isStrictVariables()) {
-                return;
-            }
+    if (/* Template::ARRAY_CALL */ 'array' === $type || !\is_object($object)) {
+        if ($isDefinedTest) {
+            return false;
+        }
 
-            if ($object instanceof ArrayAccess) {
-                $message = sprintf('Key "%s" in object with ArrayAccess of class "%s" does not exist.', $arrayItem, \get_class($object));
-            } elseif (\is_object($object)) {
-                $message = sprintf('Impossible to access a key "%s" on an object of class "%s" that does not implement ArrayAccess interface.', $item, \get_class($object));
-            } elseif (\is_array($object)) {
-                if (empty($object)) {
-                    $message = sprintf('Key "%s" does not exist as the array is empty.', $arrayItem);
-                } else {
-                    $message = sprintf('Key "%s" for array with keys "%s" does not exist.', $arrayItem, implode(', ', array_keys($object)));
-                }
-            } elseif (/* Template::ARRAY_CALL */ 'array' === $type) {
-                if (null === $object) {
-                    $message = sprintf('Impossible to access a key ("%s") on a null variable.', $item);
-                } else {
-                    $message = sprintf('Impossible to access a key ("%s") on a %s variable ("%s").', $item, \gettype($object), $object);
-                }
-            } elseif (null === $object) {
-                $message = sprintf('Impossible to access an attribute ("%s") on a null variable.', $item);
+        if ($ignoreStrictCheck || !$env->isStrictVariables()) {
+            return;
+        }
+
+        if ($object instanceof ArrayAccess) {
+            $message = sprintf('Key "%s" in object with ArrayAccess of class "%s" does not exist.', $arrayItem, \get_class($object));
+        } elseif (\is_object($object)) {
+            $message = sprintf('Impossible to access a key "%s" on an object of class "%s" that does not implement ArrayAccess interface.', $item, \get_class($object));
+        } elseif (\is_array($object)) {
+            if (empty($object)) {
+                $message = sprintf('Key "%s" does not exist as the array is empty.', $arrayItem);
             } else {
-                $message = sprintf('Impossible to access an attribute ("%s") on a %s variable ("%s").', $item, \gettype($object), $object);
+                $message = sprintf('Key "%s" for array with keys "%s" does not exist.', $arrayItem, implode(', ', array_keys($object)));
             }
-
-            throw new RuntimeError($message, $lineno, $source);
+        } elseif (/* Template::ARRAY_CALL */ 'array' === $type) {
+            if (null === $object) {
+                $message = sprintf('Impossible to access a key ("%s") on a null variable.', $item);
+            } else {
+                $message = sprintf('Impossible to access a key ("%s") on a %s variable ("%s").', $item, \gettype($object), $object);
+            }
+        } elseif (null === $object) {
+            $message = sprintf('Impossible to access an attribute ("%s") on a null variable.', $item);
+        } else {
+            $message = sprintf('Impossible to access an attribute ("%s") on a %s variable ("%s").', $item, \gettype($object), $object);
         }
+
+        throw new RuntimeError($message, $lineno, $source);
     }
 
     if (!\is_object($object)) {
