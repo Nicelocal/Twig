@@ -60,6 +60,7 @@ class Environment
     private $resolvedGlobals;
     private $loadedTemplates;
     private $strictVariables;
+    private $arrayMethods;
     private $templateClassPrefix = '__TwigTemplate_';
     private $originalCache;
     private $extensionSet;
@@ -106,6 +107,7 @@ class Environment
             'debug' => false,
             'charset' => 'UTF-8',
             'strict_variables' => false,
+            'array_methods' => false,
             'autoescape' => 'html',
             'cache' => false,
             'auto_reload' => null,
@@ -116,6 +118,7 @@ class Environment
         $this->setCharset($options['charset'] ?? 'UTF-8');
         $this->autoReload = null === $options['auto_reload'] ? $this->debug : (bool) $options['auto_reload'];
         $this->strictVariables = (bool) $options['strict_variables'];
+        $this->arrayMethods = (bool) $options['array_methods'];
         $this->setCache($options['cache']);
         $this->extensionSet = new ExtensionSet();
 
@@ -204,6 +207,34 @@ class Environment
     public function isStrictVariables()
     {
         return $this->strictVariables;
+    }
+
+    /**
+     * Enables the array_methods option.
+     */
+    public function enableArrayMethods()
+    {
+        $this->arrayMethods = true;
+        $this->updateOptionsHash();
+    }
+
+    /**
+     * Disables the array_methods option.
+     */
+    public function disableArrayMethods()
+    {
+        $this->arrayMethods = false;
+        $this->updateOptionsHash();
+    }
+
+    /**
+     * Checks if the array_methods option is enabled.
+     *
+     * @return bool true if array_methods is enabled, false otherwise
+     */
+    public function isArrayMethods()
+    {
+        return $this->arrayMethods;
     }
 
     /**
