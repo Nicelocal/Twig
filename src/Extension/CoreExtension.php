@@ -1560,6 +1560,18 @@ function twig_get_attribute(Environment $env, Source $source, $object, $item, ar
 
             return $object->$item;
         }
+
+        if ($env->isStrictProperties()) {
+            if ($isDefinedTest) {
+                return false;
+            }
+
+            if ($ignoreStrictCheck || !$env->isStrictVariables()) {
+                return;
+            }
+
+            throw new RuntimeError(sprintf('The property "%1$s" does not exist in class "%2$s".', $item, get_class($object)), $lineno, $source);
+        }
     }
 
     static $cache = [];
