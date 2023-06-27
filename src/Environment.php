@@ -124,7 +124,7 @@ class Environment
         $this->autoReload = null === $options['auto_reload'] ? $this->debug : (bool) $options['auto_reload'];
         $this->strictVariables = (bool) $options['strict_variables'];
         $this->arrayMethods = (bool) $options['array_methods'];
-        $this->strictVariables = (bool) $options['strict_properties'];
+        $this->strictProperties = (bool) $options['strict_properties'];
         $this->setCache($options['cache']);
         $this->extensionSet = new ExtensionSet();
 
