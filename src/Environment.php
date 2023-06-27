@@ -60,6 +60,7 @@ class Environment
     private $resolvedGlobals;
     private $loadedTemplates;
     private $strictVariables;
+    private $strictProperties;
     private $templateClassPrefix = '__TwigTemplate_';
     private $originalCache;
     private $extensionSet;
@@ -88,6 +89,9 @@ class Environment
      *  * strict_variables: Whether to ignore invalid variables in templates
      *                      (default to false).
      *
+     *  * strict_properties: Whether to ignore invalid properties in templates
+     *                      (default to false).
+     *
      *  * autoescape: Whether to enable auto-escaping (default to html):
      *                  * false: disable auto-escaping
      *                  * html, js: set the autoescaping to one of the supported strategies
@@ -106,6 +110,7 @@ class Environment
             'debug' => false,
             'charset' => 'UTF-8',
             'strict_variables' => false,
+            'strict_properties' => false,
             'autoescape' => 'html',
             'cache' => false,
             'auto_reload' => null,
@@ -116,6 +121,7 @@ class Environment
         $this->setCharset($options['charset'] ?? 'UTF-8');
         $this->autoReload = null === $options['auto_reload'] ? $this->debug : (bool) $options['auto_reload'];
         $this->strictVariables = (bool) $options['strict_variables'];
+        $this->strictVariables = (bool) $options['strict_properties'];
         $this->setCache($options['cache']);
         $this->extensionSet = new ExtensionSet();
 
@@ -204,6 +210,35 @@ class Environment
     public function isStrictVariables()
     {
         return $this->strictVariables;
+    }
+
+
+    /**
+     * Enables the strict_properties option.
+     */
+    public function enableStrictProperties()
+    {
+        $this->strictProperties = true;
+        $this->updateOptionsHash();
+    }
+
+    /**
+     * Disables the strict_properties option.
+     */
+    public function disableStrictProperties()
+    {
+        $this->strictProperties = false;
+        $this->updateOptionsHash();
+    }
+
+    /**
+     * Checks if the strict_properties option is enabled.
+     *
+     * @return bool true if strict_properties is enabled, false otherwise
+     */
+    public function isStrictProperties()
+    {
+        return $this->strictProperties;
     }
 
     /**
