@@ -93,72 +93,72 @@ class ExpressionParserTest extends TestCase
         return [
             // simple array
             ['{{ [1, 2] }}', new ArrayExpression([
-                  new ConstantExpression(0, 1),
-                  new ConstantExpression(1, 1),
+                    new ConstantExpression(0, 1),
+                    new ConstantExpression(1, 1),
 
-                  new ConstantExpression(1, 1),
-                  new ConstantExpression(2, 1),
+                    new ConstantExpression(1, 1),
+                    new ConstantExpression(2, 1),
                 ], 1),
             ],
 
             // array with trailing ,
             ['{{ [1, 2, ] }}', new ArrayExpression([
-                  new ConstantExpression(0, 1),
-                  new ConstantExpression(1, 1),
+                    new ConstantExpression(0, 1),
+                    new ConstantExpression(1, 1),
 
-                  new ConstantExpression(1, 1),
-                  new ConstantExpression(2, 1),
+                    new ConstantExpression(1, 1),
+                    new ConstantExpression(2, 1),
                 ], 1),
             ],
 
             // simple hash
             ['{{ {"a": "b", "b": "c"} }}', new ArrayExpression([
-                  new ConstantExpression('a', 1),
-                  new ConstantExpression('b', 1),
+                    new ConstantExpression('a', 1),
+                    new ConstantExpression('b', 1),
 
-                  new ConstantExpression('b', 1),
-                  new ConstantExpression('c', 1),
+                    new ConstantExpression('b', 1),
+                    new ConstantExpression('c', 1),
                 ], 1),
             ],
 
             // hash with trailing ,
             ['{{ {"a": "b", "b": "c", } }}', new ArrayExpression([
-                  new ConstantExpression('a', 1),
-                  new ConstantExpression('b', 1),
+                    new ConstantExpression('a', 1),
+                    new ConstantExpression('b', 1),
 
-                  new ConstantExpression('b', 1),
-                  new ConstantExpression('c', 1),
+                    new ConstantExpression('b', 1),
+                    new ConstantExpression('c', 1),
                 ], 1),
             ],
 
             // hash in an array
             ['{{ [1, {"a": "b", "b": "c"}] }}', new ArrayExpression([
-                  new ConstantExpression(0, 1),
-                  new ConstantExpression(1, 1),
+                    new ConstantExpression(0, 1),
+                    new ConstantExpression(1, 1),
 
-                  new ConstantExpression(1, 1),
-                  new ArrayExpression([
+                    new ConstantExpression(1, 1),
+                    new ArrayExpression([
                         new ConstantExpression('a', 1),
                         new ConstantExpression('b', 1),
 
                         new ConstantExpression('b', 1),
                         new ConstantExpression('c', 1),
-                      ], 1),
+                    ], 1),
                 ], 1),
             ],
 
             // array in a hash
             ['{{ {"a": [1, 2], "b": "c"} }}', new ArrayExpression([
-                  new ConstantExpression('a', 1),
-                  new ArrayExpression([
+                    new ConstantExpression('a', 1),
+                    new ArrayExpression([
                         new ConstantExpression(0, 1),
                         new ConstantExpression(1, 1),
 
                         new ConstantExpression(1, 1),
                         new ConstantExpression(2, 1),
-                      ], 1),
-                  new ConstantExpression('b', 1),
-                  new ConstantExpression('c', 1),
+                    ], 1),
+                    new ConstantExpression('b', 1),
+                    new ConstantExpression('c', 1),
                 ], 1),
             ],
             ['{{ {a, b} }}', new ArrayExpression([
@@ -166,6 +166,32 @@ class ExpressionParserTest extends TestCase
                 new NameExpression('a', 1),
                 new ConstantExpression('b', 1),
                 new NameExpression('b', 1),
+            ], 1)],
+
+            // array with spread operator
+            ['{{ [1, 2, ...foo] }}',
+            new ArrayExpression([
+                new ConstantExpression(0, 1),
+                new ConstantExpression(1, 1),
+
+                new ConstantExpression(1, 1),
+                new ConstantExpression(2, 1),
+
+                new ConstantExpression(2, 1),
+                $this->createNameExpression('foo', ['spread' => true]),
+            ], 1)],
+
+            // hash with spread operator
+            ['{{ {"a": "b", "b": "c", ...otherLetters} }}',
+            new ArrayExpression([
+                new ConstantExpression('a', 1),
+                new ConstantExpression('b', 1),
+
+                new ConstantExpression('b', 1),
+                new ConstantExpression('c', 1),
+
+                new ConstantExpression(0, 1),
+                $this->createNameExpression('otherLetters', ['spread' => true]),
             ], 1)],
         ];
     }
@@ -386,5 +412,15 @@ class ExpressionParserTest extends TestCase
         $parser = new Parser($env);
 
         $parser->parse($env->tokenize(new Source('{{ 1 is foobar }}', 'index')));
+    }
+
+    private function createNameExpression(string $name, array $attributes)
+    {
+        $expression = new NameExpression($name, 1);
+        foreach ($attributes as $key => $value) {
+            $expression->setAttribute($key, $value);
+        }
+
+        return $expression;
     }
 }
