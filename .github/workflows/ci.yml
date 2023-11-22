@@ -29,11 +29,12 @@ jobs:
                     - '8.0'
                     - '8.1'
                     - '8.2'
+                    - '8.3'
                 experimental: [false]
 
         steps:
             - name: "Checkout code"
-              uses: actions/checkout@v3
+              uses: actions/checkout@v4
 
             - name: "Install PHP with extensions"
               uses: shivammathur/setup-php@v2
@@ -75,6 +76,7 @@ jobs:
                     - '8.0'
                     - '8.1'
                     - '8.2'
+                    - '8.3'
                 extension:
                     - 'extra/cache-extra'
                     - 'extra/cssinliner-extra'
@@ -88,7 +90,7 @@ jobs:
 
         steps:
             - name: "Checkout code"
-              uses: actions/checkout@v3
+              uses: actions/checkout@v4
 
             - name: "Install PHP with extensions"
               uses: shivammathur/setup-php@v2
@@ -133,13 +135,13 @@ jobs:
 
         steps:
             - name: "Checkout code"
-              uses: actions/checkout@v3
+              uses: actions/checkout@v4
 
             - name: "Install PHP with extensions"
               uses: shivammathur/setup-php@v2
               with:
                   coverage: "none"
-                  extensions: "gd, pdo_sqlite"
+                  extensions: "gd, pdo_sqlite, uuid"
                   php-version: ${{ matrix.php-version }}
                   ini-values: memory_limit=-1
                   tools: composer:v2
