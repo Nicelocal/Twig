@@ -59,7 +59,7 @@ Many IDEs support syntax highlighting and auto-completion for Twig:
 * *Notepad++* via the `Notepad++ Twig Highlighter`_
 * *Emacs* via `web-mode.el`_
 * *Atom* via the `PHP-twig for atom`_
-* *Visual Studio Code* via the `Twig pack`_ or `Modern Twig`_
+* *Visual Studio Code* via the `Twig pack`_, `Modern Twig`_ or `Twiggy`_
 
 You might also be interested in:
 
@@ -753,10 +753,10 @@ The following operators don't fit into any of the other categories:
 
   .. code-block:: twig
 
-      {{ 1..5 }}
+      {% for i in 1..5 %}{{ i }}{% endfor %}
 
-      {# equivalent to #}
-      {{ range(1, 5) }}
+      {# is equivalent to #}
+      {% for i in range(1, 5) %}{{ i }}{% endfor %}
 
   Note that you must use parentheses when combining it with the filter operator
   due to the :ref:`operator precedence rules <twig-expressions>`:
@@ -891,3 +891,4 @@ Twig can be extended. If you want to create your own extensions, read the
 .. _`Twig pack`:                  https://marketplace.visualstudio.com/items?itemName=bajdzis.vscode-twig-pack
 .. _`Modern Twig`:                https://marketplace.visualstudio.com/items?itemName=Stanislav.vscode-twig
 .. _`Twig Language Server`:       https://github.com/kaermorchen/twig-language-server/tree/master/packages/language-server
+.. _`Twiggy`:                     https://marketplace.visualstudio.com/items?itemName=moetelo.twiggy
