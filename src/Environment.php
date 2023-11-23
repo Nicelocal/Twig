@@ -537,7 +537,7 @@ class Environment
     private array $loadedLexers = [];
     private function getDefaultLexer(): Lexer
     {
-        $name = $this->extensionSet->getSignature();
+        $name = $this->extensionSet->getSignature().';'.self::VERSION;
 
         if (isset($this->loadedLexers[$name])) {
             return $this->loadedLexers[$name];
