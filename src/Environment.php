@@ -63,6 +63,7 @@ class Environment
     private $arrayMethods;
     private $strictProperties;
     private $templateClassPrefix = '__TwigTemplate_';
+    private $lexerClassPrefix = '__TwigLexer_';
     private $originalCache;
     private $extensionSet;
     private $runtimeLoaders = [];
@@ -533,13 +534,56 @@ class Environment
         $this->lexer = $lexer;
     }
 
+    private array $loadedLexers = [];
+    private function getDefaultLexer(): Lexer
+    {
+        $name = $this->extensionSet->getSignature();
+
+        if (isset($this->loadedLexers[$name])) {
+            return $this->loadedLexers[$name];
+        }
+
+        $cls = $this->lexerClassPrefix.hash(\PHP_VERSION_ID < 80100 ? 'sha256' : 'xxh128', $name);
+
+        if (!class_exists($cls, false)) {
+            $key = 'Lexer_'.$this->cache->generateKey($name, $cls);
+
+            $this->cache->load($key);
+
+            if (!class_exists($cls, false)) {
+                $lexer = new Lexer($this);
+                $content = "<?php class $cls extends \\Twig\\Lexer {\n";
+                $content .= "protected \$isInitialized = true;\n";
+                $content .= "protected \$regexes = ";
+                $content .= var_export($lexer->getRegexes(), true);
+                $content .= ";\n}\n";
+                $this->cache->write($key, $content);
+                $this->cache->load($key);
+
+                if (!class_exists($cls, false)) {
+                    /* Last line of defense if either $this->bcWriteCacheFile was used,
+                     * $this->cache is implemented as a no-op or we have a race condition
+                     * where the cache was cleared between the above calls to write to and load from
+                     * the cache.
+                     */
+                    eval('?>'.$content);
+                }
+
+                if (!class_exists($cls, false)) {
+                    throw new RuntimeError(sprintf('Failed to load Twig lexer "%s": cache might be corrupted.', $cls), -1);
+                }
+            }
+        }
+
+        return $this->loadedLexers[$name] = new $cls($this);
+    }
     /**
      * @throws SyntaxError When the code is syntactically wrong
      */
     public function tokenize(Source $source): TokenStream
     {
         if (null === $this->lexer) {
-            $this->lexer = new Lexer($this);
+            $this->lexer = $this->getDefaultLexer();
         }
 
         return $this->lexer->tokenize($source);

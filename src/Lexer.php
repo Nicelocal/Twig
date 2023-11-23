@@ -19,7 +19,8 @@ use Twig\Error\SyntaxError;
  */
 class Lexer
 {
-    private $isInitialized = false;
+    /** @internal */
+    protected $isInitialized = false;
 
     private $tokens;
     private $code;
@@ -32,7 +33,8 @@ class Lexer
     private $env;
     private $source;
     private $options;
-    private $regexes;
+    /** @internal */
+    protected $regexes;
     private $position;
     private $positions;
     private $currentVarBlockLine;
@@ -65,6 +67,12 @@ class Lexer
         ], $options);
     }
 
+    /** @internal */
+    public function getRegexes(): array
+    {
+        $this->initialize();
+        return $this->regexes;
+    }
     private function initialize()
     {
         if ($this->isInitialized) {
