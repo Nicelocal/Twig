@@ -546,7 +546,7 @@ class Environment
         $cls = $this->lexerClassPrefix.hash(\PHP_VERSION_ID < 80100 ? 'sha256' : 'xxh128', $name);
 
         if (!class_exists($cls, false)) {
-            $key = 'Lexer_'.$this->cache->generateKey($name, $cls);
+            $key = $this->cache->generateKey($name, $cls);
 
             $this->cache->load($key);
 
