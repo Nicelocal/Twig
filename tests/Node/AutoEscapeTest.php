@@ -33,7 +33,7 @@ class AutoEscapeTest extends NodeTestCase
         $node = new AutoEscapeNode(true, $body, 1);
 
         return [
-            [$node, "// line 1\necho \"foo\";"],
+            [$node, "// line 1\nyield \"foo\";"],
         ];
     }
 }

@@ -11,7 +11,10 @@ namespace Twig\Tests\Node;
  * file that was distributed with this source code.
  */
 
+use Twig\Environment;
+use Twig\Loader\ArrayLoader;
 use Twig\Node\BlockNode;
+use Twig\Node\Node;
 use Twig\Node\TextNode;
 use Twig\Test\NodeTestCase;
 
@@ -28,19 +31,19 @@ class BlockTest extends NodeTestCase
 
     public function getTests()
     {
-        $body = new TextNode('foo', 1);
-        $node = new BlockNode('foo', $body, 1);
-
-        return [
-            [$node, <<<EOF
+        $tests = [];
+        $tests[] = [new BlockNode('foo', new TextNode('foo', 1), 1), <<<EOF
 // line 1
 public function block_foo(\$context, array \$blocks = [])
 {
     \$macros = \$this->macros;
-    echo "foo";
+    yield "foo";
+    return; yield '';
 }
 EOF
-            ],
+            , new Environment(new ArrayLoader()),
         ];
+
+        return $tests;
     }
 }

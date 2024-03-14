@@ -63,6 +63,7 @@ class ModuleTest extends NodeTestCase
 use Twig\Environment;
 use Twig\Error\LoaderError;
 use Twig\Error\RuntimeError;
+use Twig\Extension\CoreExtension;
 use Twig\Extension\SandboxExtension;
 use Twig\Markup;
 use Twig\Sandbox\SecurityError;
@@ -94,7 +95,8 @@ class __TwigTemplate_%x extends Template
     {
         \$macros = \$this->macros;
         // line 1
-        echo "foo";
+        yield "foo";
+        return; yield '';
     }
 
     /**
@@ -110,7 +112,7 @@ class __TwigTemplate_%x extends Template
      */
     public function getDebugInfo()
     {
-        return array (  37 => 1,);
+        return array (  38 => 1,);
     }
 
     public function getSourceContext()
@@ -133,6 +135,7 @@ EOF
 use Twig\Environment;
 use Twig\Error\LoaderError;
 use Twig\Error\RuntimeError;
+use Twig\Extension\CoreExtension;
 use Twig\Extension\SandboxExtension;
 use Twig\Markup;
 use Twig\Sandbox\SecurityError;
@@ -171,7 +174,7 @@ class __TwigTemplate_%x extends Template
         \$macros["macro"] = \$this->macros["macro"] = \$this->loadTemplate("foo.twig", "foo.twig", 2)->unwrap();
         // line 1
         \$this->parent = \$this->loadTemplate("layout.twig", "foo.twig", 1);
-        \$this->parent->display(\$context, array_merge(\$this->blocks, \$blocks));
+        yield from \$this->parent->unwrap()->yield(\$context, array_merge(\$this->blocks, \$blocks));
     }
 
     /**
@@ -195,7 +198,7 @@ class __TwigTemplate_%x extends Template
      */
     public function getDebugInfo()
     {
-        return array (  43 => 1,  41 => 2,  34 => 1,);
+        return array (  44 => 1,  42 => 2,  35 => 1,);
     }
 
     public function getSourceContext()
@@ -223,6 +226,7 @@ EOF
 use Twig\Environment;
 use Twig\Error\LoaderError;
 use Twig\Error\RuntimeError;
+use Twig\Extension\CoreExtension;
 use Twig\Extension\SandboxExtension;
 use Twig\Markup;
 use Twig\Sandbox\SecurityError;
@@ -260,7 +264,7 @@ class __TwigTemplate_%x extends Template
         // line 4
         \$context["foo"] = "foo";
         // line 2
-        \$this->getParent(\$context)->display(\$context, array_merge(\$this->blocks, \$blocks));
+        yield from \$this->getParent(\$context)->unwrap()->yield(\$context, array_merge(\$this->blocks, \$blocks));
     }
 
     /**
@@ -284,7 +288,7 @@ class __TwigTemplate_%x extends Template
      */
     public function getDebugInfo()
     {
-        return array (  43 => 2,  41 => 4,  34 => 2,);
+        return array (  44 => 2,  42 => 4,  35 => 2,);
     }
 
     public function getSourceContext()

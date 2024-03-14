@@ -38,7 +38,7 @@ if (!\$alreadySandboxed = \$this->sandbox->isSandboxed()) {
     \$this->sandbox->enableSandbox();
 }
 try {
-    echo "foo";
+    yield "foo";
 } finally {
     if (!\$alreadySandboxed) {
         \$this->sandbox->disableSandbox();

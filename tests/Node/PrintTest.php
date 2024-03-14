@@ -28,7 +28,7 @@ class PrintTest extends NodeTestCase
     public function getTests()
     {
         $tests = [];
-        $tests[] = [new PrintNode(new ConstantExpression('foo', 1), 1), "// line 1\necho \"foo\";"];
+        $tests[] = [new PrintNode(new ConstantExpression('foo', 1), 1), "// line 1\nyield \"foo\";"];
 
         return $tests;
     }

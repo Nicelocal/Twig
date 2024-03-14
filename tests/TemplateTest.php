@@ -15,6 +15,7 @@ use AssertionError;
 use PHPUnit\Framework\TestCase;
 use Twig\Environment;
 use Twig\Error\RuntimeError;
+use Twig\Extension\CoreExtension;
 use Twig\Extension\SandboxExtension;
 use Twig\Loader\ArrayLoader;
 use Twig\Loader\LoaderInterface;
@@ -144,7 +145,7 @@ EOHTML
         $template = new TemplateForTest($twig);
 
         try {
-            twig_get_attribute($twig, $template->getSourceContext(), $object, $item, [], 'any', false, false, true);
+            CoreExtension::getAttribute($twig, $template->getSourceContext(), $object, $item, [], 'any', false, false, true);
 
             if (!$allowed) {
                 $this->fail();
@@ -172,6 +173,24 @@ EOHTML
         ];
     }
 
+    /**
+     * @dataProvider getRenderTemplateWithoutOutputData
+     */
+    public function testRenderTemplateWithoutOutput(string $template)
+    {
+        $twig = new Environment(new ArrayLoader(['index' => $template]));
+        $this->assertSame('', $twig->render('index'));
+    }
+
+    public function getRenderTemplateWithoutOutputData()
+    {
+        return [
+            [''],
+            ['{% for var in [] %}{% endfor %}'],
+            ['{% if false %}{% endif %}'],
+        ];
+    }
+
     public function testRenderBlockWithUndefinedBlock()
     {
         $this->expectException(RuntimeError::class);
@@ -179,13 +198,7 @@ EOHTML
 
         $twig = new Environment($this->createMock(LoaderInterface::class));
         $template = new TemplateForTest($twig, 'index.twig');
-        try {
-            $template->renderBlock('unknown', []);
-        } catch (\Exception $e) {
-            ob_end_clean();
-
-            throw $e;
-        }
+        $template->renderBlock('unknown', []);
     }
 
     public function testDisplayBlockWithUndefinedBlock()
@@ -230,14 +243,14 @@ EOHTML
         $this->assertSame('IntegerButStringWithLeadingZeros', $array['01']);
         $this->assertSame('EmptyString', $array[null]);
 
-        $this->assertSame('Zero', twig_get_attribute($twig, $template->getSourceContext(), $array, false), 'false is treated as 0 when accessing an array (equals PHP behavior)');
-        $this->assertSame('One', twig_get_attribute($twig, $template->getSourceContext(), $array, true), 'true is treated as 1 when accessing an array (equals PHP behavior)');
-        $this->assertSame('One', twig_get_attribute($twig, $template->getSourceContext(), $array, 1.5), 'float is casted to int when accessing an array (equals PHP behavior)');
-        $this->assertSame('One', twig_get_attribute($twig, $template->getSourceContext(), $array, '1'), '"1" is treated as integer 1 when accessing an array (equals PHP behavior)');
-        $this->assertSame('MinusOne', twig_get_attribute($twig, $template->getSourceContext(), $array, -1.5), 'negative float is casted to int when accessing an array (equals PHP behavior)');
-        $this->assertSame('FloatButString', twig_get_attribute($twig, $template->getSourceContext(), $array, '1.5'), '"1.5" is treated as-is when accessing an array (equals PHP behavior)');
-        $this->assertSame('IntegerButStringWithLeadingZeros', twig_get_attribute($twig, $template->getSourceContext(), $array, '01'), '"01" is treated as-is when accessing an array (equals PHP behavior)');
-        $this->assertSame('EmptyString', twig_get_attribute($twig, $template->getSourceContext(), $array, null), 'null is treated as "" when accessing an array (equals PHP behavior)');
+        $this->assertSame('Zero', CoreExtension::getAttribute($twig, $template->getSourceContext(), $array, false), 'false is treated as 0 when accessing an array (equals PHP behavior)');
+        $this->assertSame('One', CoreExtension::getAttribute($twig, $template->getSourceContext(), $array, true), 'true is treated as 1 when accessing an array (equals PHP behavior)');
+        $this->assertSame('One', CoreExtension::getAttribute($twig, $template->getSourceContext(), $array, 1.5), 'float is casted to int when accessing an array (equals PHP behavior)');
+        $this->assertSame('One', CoreExtension::getAttribute($twig, $template->getSourceContext(), $array, '1'), '"1" is treated as integer 1 when accessing an array (equals PHP behavior)');
+        $this->assertSame('MinusOne', CoreExtension::getAttribute($twig, $template->getSourceContext(), $array, -1.5), 'negative float is casted to int when accessing an array (equals PHP behavior)');
+        $this->assertSame('FloatButString', CoreExtension::getAttribute($twig, $template->getSourceContext(), $array, '1.5'), '"1.5" is treated as-is when accessing an array (equals PHP behavior)');
+        $this->assertSame('IntegerButStringWithLeadingZeros', CoreExtension::getAttribute($twig, $template->getSourceContext(), $array, '01'), '"01" is treated as-is when accessing an array (equals PHP behavior)');
+        $this->assertSame('EmptyString', CoreExtension::getAttribute($twig, $template->getSourceContext(), $array, null), 'null is treated as "" when accessing an array (equals PHP behavior)');
     }
 
     /**
@@ -248,7 +261,7 @@ EOHTML
         $twig = new Environment($this->createMock(LoaderInterface::class));
         $template = new TemplateForTest($twig);
 
-        $this->assertEquals($value, twig_get_attribute($twig, $template->getSourceContext(), $object, $item, $arguments, $type));
+        $this->assertEquals($value, CoreExtension::getAttribute($twig, $template->getSourceContext(), $object, $item, $arguments, $type));
     }
 
     /**
@@ -260,13 +273,13 @@ EOHTML
         $template = new TemplateForTest($twig);
 
         if ($defined) {
-            $this->assertEquals($value, twig_get_attribute($twig, $template->getSourceContext(), $object, $item, $arguments, $type));
+            $this->assertEquals($value, CoreExtension::getAttribute($twig, $template->getSourceContext(), $object, $item, $arguments, $type));
         } else {
             $this->expectException(RuntimeError::class);
             if (null !== $exceptionMessage) {
                 $this->expectExceptionMessage($exceptionMessage);
             }
-            $this->assertEquals($value, twig_get_attribute($twig, $template->getSourceContext(), $object, $item, $arguments, $type));
+            $this->assertEquals($value, CoreExtension::getAttribute($twig, $template->getSourceContext(), $object, $item, $arguments, $type));
         }
     }
 
@@ -278,7 +291,7 @@ EOHTML
         $twig = new Environment($this->createMock(LoaderInterface::class));
         $template = new TemplateForTest($twig);
 
-        $this->assertEquals($defined, twig_get_attribute($twig, $template->getSourceContext(), $object, $item, $arguments, $type, true));
+        $this->assertEquals($defined, CoreExtension::getAttribute($twig, $template->getSourceContext(), $object, $item, $arguments, $type, true));
     }
 
     /**
@@ -289,7 +302,7 @@ EOHTML
         $twig = new Environment($this->createMock(LoaderInterface::class), ['strict_variables' => true]);
         $template = new TemplateForTest($twig);
 
-        $this->assertEquals($defined, twig_get_attribute($twig, $template->getSourceContext(), $object, $item, $arguments, $type, true));
+        $this->assertEquals($defined, CoreExtension::getAttribute($twig, $template->getSourceContext(), $object, $item, $arguments, $type, true));
     }
 
     public function testGetAttributeCallExceptions()
@@ -299,7 +312,7 @@ EOHTML
 
         $object = new TemplateMagicMethodExceptionObject();
 
-        $this->assertNull(twig_get_attribute($twig, $template->getSourceContext(), $object, 'foo'));
+        $this->assertNull(CoreExtension::getAttribute($twig, $template->getSourceContext(), $object, 'foo'));
     }
 
     public function getGetAttributeTests()
@@ -445,9 +458,9 @@ EOHTML
         $getIsObject = new TemplateGetIsMethods();
         $template = new TemplateForTest($twig, 'index.twig');
         // first time should not create a cache for "get"
-        $this->assertNull(twig_get_attribute($twig, $template->getSourceContext(), $getIsObject, 'get'));
+        $this->assertNull(CoreExtension::getAttribute($twig, $template->getSourceContext(), $getIsObject, 'get'));
         // 0 should be in the method cache now, so this should fail
-        $this->assertNull(twig_get_attribute($twig, $template->getSourceContext(), $getIsObject, 0));
+        $this->assertNull(CoreExtension::getAttribute($twig, $template->getSourceContext(), $getIsObject, 0));
     }
 }
 

@@ -11,6 +11,8 @@ namespace Twig\Tests\Node;
  * file that was distributed with this source code.
  */
 
+use Twig\Environment;
+use Twig\Loader\ArrayLoader;
 use Twig\Node\Expression\AssignNameExpression;
 use Twig\Node\Expression\ConstantExpression;
 use Twig\Node\Expression\NameExpression;
@@ -49,13 +51,26 @@ EOF
         $names = new Node([new AssignNameExpression('foo', 1)], [], 1);
         $values = new Node([new PrintNode(new ConstantExpression('foo', 1), 1)], [], 1);
         $node = new SetNode(true, $names, $values, 1);
-        $tests[] = [$node, <<<EOF
+
+        if ($this->getEnvironment()->useYield()) {
+            $tests[] = [$node, <<<EOF
 // line 1
-ob_start(function () { return ''; });
-echo "foo";
-\$context["foo"] = ('' === \$tmp = ob_get_clean()) ? '' : new Markup(\$tmp, \$this->env->getCharset());
+\$context["foo"] = ('' === \$tmp = implode('', iterator_to_array((function () use (&\$context, \$macros, \$blocks) {
+    yield "foo";
+})() ?? new \EmptyIterator()))) ? '' : new Markup(\$tmp, \$this->env->getCharset());
 EOF
-        ];
+                , new Environment(new ArrayLoader()),
+            ];
+        } else {
+            $tests[] = [$node, <<<'EOF'
+// line 1
+$context["foo"] = ('' === $tmp = \Twig\Extension\CoreExtension::captureOutput((function () use (&$context, $macros, $blocks) {
+    yield "foo";
+})() ?? new \EmptyIterator())) ? '' : new Markup($tmp, $this->env->getCharset());
+EOF
+                , new Environment(new ArrayLoader()),
+            ];
+        }
 
         $names = new Node([new AssignNameExpression('foo', 1)], [], 1);
         $values = new TextNode('foo', 1);
@@ -69,9 +84,9 @@ EOF
         $names = new Node([new AssignNameExpression('foo', 1), new AssignNameExpression('bar', 1)], [], 1);
         $values = new Node([new ConstantExpression('foo', 1), new NameExpression('bar', 1)], [], 1);
         $node = new SetNode(false, $names, $values, 1);
-        $tests[] = [$node, <<<EOF
+        $tests[] = [$node, <<<'EOF'
 // line 1
-list(\$context["foo"], \$context["bar"]) = ["foo", {$this->getVariableGetter('bar')}];
+[$context["foo"], $context["bar"]] = ["foo", ($context["bar"] ?? null)];
 EOF
         ];
 

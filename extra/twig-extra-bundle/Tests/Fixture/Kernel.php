@@ -5,6 +5,7 @@ namespace Twig\Extra\TwigExtraBundle\Tests\Fixture;
 use League\CommonMark\Extension\Strikethrough\StrikethroughExtension;
 use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
 use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
+use Symfony\Bundle\FrameworkBundle\Test\NotificationAssertionsTrait;
 use Symfony\Bundle\TwigBundle\TwigBundle;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -24,11 +25,22 @@ class Kernel extends BaseKernel
 
     protected function configureContainer(ContainerBuilder $c, LoaderInterface $loader): void
     {
-        $c->loadFromExtension('framework', [
+        $config = [
             'secret' => 'S3CRET',
             'test' => true,
-        ]);
+            'router' => ['utf8' => true],
+            'http_method_override' => false,
+            'php_errors' => [
+                'log' => true,
+            ],
+        ];
 
+        // the "handle_all_throwables" option was introduced in FrameworkBundle 6.2 (and so was the NotificationAssertionsTrait)
+        if (trait_exists(NotificationAssertionsTrait::class)) {
+            $config['handle_all_throwables'] = true;
+        }
+
+        $c->loadFromExtension('framework', $config);
         $c->loadFromExtension('twig', [
             'default_path' => __DIR__.'/views',
         ]);

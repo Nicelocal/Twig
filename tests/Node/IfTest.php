@@ -51,7 +51,7 @@ class IfTest extends NodeTestCase
         $tests[] = [$node, <<<EOF
 // line 1
 if (true) {
-    echo {$this->getVariableGetter('foo')};
+    yield {$this->getVariableGetter('foo')};
 }
 EOF
         ];
@@ -68,9 +68,9 @@ EOF
         $tests[] = [$node, <<<EOF
 // line 1
 if (true) {
-    echo {$this->getVariableGetter('foo')};
+    yield {$this->getVariableGetter('foo')};
 } elseif (false) {
-    echo {$this->getVariableGetter('bar')};
+    yield {$this->getVariableGetter('bar')};
 }
 EOF
         ];
@@ -85,9 +85,9 @@ EOF
         $tests[] = [$node, <<<EOF
 // line 1
 if (true) {
-    echo {$this->getVariableGetter('foo')};
+    yield {$this->getVariableGetter('foo')};
 } else {
-    echo {$this->getVariableGetter('bar')};
+    yield {$this->getVariableGetter('bar')};
 }
 EOF
         ];

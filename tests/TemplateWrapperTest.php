@@ -59,6 +59,7 @@ class TemplateWrapperTest extends TestCase
         $twig = new Environment(new ArrayLoader([
             'index' => '{% block foo %}{{ foo }}{{ bar }}{% endblock %}',
         ]));
+
         $twig->addGlobal('bar', 'BAR');
 
         $wrapper = $twig->load('index');

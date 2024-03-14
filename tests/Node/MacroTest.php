@@ -11,6 +11,8 @@ namespace Twig\Tests\Node;
  * file that was distributed with this source code.
  */
 
+use Twig\Environment;
+use Twig\Loader\ArrayLoader;
 use Twig\Node\Expression\ConstantExpression;
 use Twig\Node\Expression\NameExpression;
 use Twig\Node\MacroNode;
@@ -33,15 +35,17 @@ class MacroTest extends NodeTestCase
 
     public function getTests()
     {
-        $body = new TextNode('foo', 1);
+        $tests = [];
+
         $arguments = new Node([
             'foo' => new ConstantExpression(null, 1),
             'bar' => new ConstantExpression('Foo', 1),
         ], [], 1);
+
+        $body = new TextNode('foo', 1);
         $node = new MacroNode('foo', $body, $arguments, 1);
 
-        return [
-            [$node, <<<EOF
+        $text[] = [$node, <<<EOF
 // line 1
 public function macro_foo(\$__foo__ = null, \$__bar__ = "Foo", ...\$__varargs__)
 {
@@ -54,17 +58,14 @@ public function macro_foo(\$__foo__ = null, \$__bar__ = "Foo", ...\$__varargs__)
 
     \$blocks = [];
 
-    ob_start(function () { return ''; });
-    try {
-        echo "foo";
-
-        return ('' === \$tmp = ob_get_contents()) ? '' : new Markup(\$tmp, \$this->env->getCharset());
-    } finally {
-        ob_end_clean();
-    }
+    return new Markup(implode('', iterator_to_array((function () use (\$context, \$macros, \$blocks) {
+        yield "foo";
+    })() ?? new \EmptyIterator())), \$this->env->getCharset());
 }
 EOF
-            ],
+            , new Environment(new ArrayLoader()),
         ];
+
+        return $tests;
     }
 }

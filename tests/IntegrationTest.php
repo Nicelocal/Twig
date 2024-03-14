@@ -13,6 +13,7 @@ namespace Twig\Tests;
 
 use Twig\Extension\AbstractExtension;
 use Twig\Extension\DebugExtension;
+use Twig\Extension\EscaperExtension;
 use Twig\Extension\SandboxExtension;
 use Twig\Extension\StringLoaderExtension;
 use Twig\Node\Expression\ConstantExpression;
@@ -215,7 +216,7 @@ class TwigTestExtension extends AbstractExtension
      */
     public function escape_and_nl2br($env, $value, $sep = '<br />')
     {
-        return $this->nl2br(twig_escape_filter($env, $value, 'html'), $sep);
+        return $this->nl2br(EscaperExtension::escape($env, $value, 'html'), $sep);
     }
 
     /**
@@ -271,7 +272,7 @@ class TwigTestExtension extends AbstractExtension
     public function __call($method, $arguments)
     {
         if ('magicCall' !== $method) {
-            throw new \BadMethodCallException('Unexpected call to __call');
+            throw new \BadMethodCallException('Unexpected call to __call.');
         }
 
         return 'magic_'.$arguments[0];
@@ -280,7 +281,7 @@ class TwigTestExtension extends AbstractExtension
     public static function __callStatic($method, $arguments)
     {
         if ('magicStaticCall' !== $method) {
-            throw new \BadMethodCallException('Unexpected call to __callStatic');
+            throw new \BadMethodCallException('Unexpected call to __callStatic.');
         }
 
         return 'static_magic_'.$arguments[0];
@@ -295,7 +296,7 @@ class MagicCallStub
 {
     public function __call($name, $args)
     {
-        throw new \Exception('__call shall not be called');
+        throw new \Exception('__call shall not be called.');
     }
 }
 
@@ -338,7 +339,7 @@ class CountableStub implements \Countable
 
     public function __toString()
     {
-        throw new \Exception('__toString shall not be called on \Countables');
+        throw new \Exception('__toString shall not be called on \Countables.');
     }
 }
 
