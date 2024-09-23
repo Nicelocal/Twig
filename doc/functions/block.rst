@@ -1,7 +1,7 @@
 ``block``
 =========
 
-When a template uses inheritance and if you want to print a block multiple
+When a template uses inheritance and if you want to render a block multiple
 times, use the ``block`` function:
 
 .. code-block:: html+twig
@@ -31,6 +31,12 @@ current template:
     {% if block("footer", "common_blocks.twig") is defined %}
         ...
     {% endif %}
+
+Arguments
+---------
+
+* ``name``: The block name
+* ``template``: The template where to look for the block
 
 .. seealso::
 

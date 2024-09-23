@@ -12,6 +12,7 @@
 namespace Twig\Node\Expression;
 
 use Twig\Compiler;
+use Twig\Node\Expression\Unary\StringCastUnary;
 
 class ArrayExpression extends AbstractExpression
 {
@@ -70,7 +71,7 @@ class ArrayExpression extends AbstractExpression
         $needsArrayMergeSpread = \PHP_VERSION_ID < 80100 && $this->hasSpreadItem($keyValuePairs);
 
         if ($needsArrayMergeSpread) {
-            $compiler->raw('CoreExtension::arrayMerge(');
+            $compiler->raw('CoreExtension::merge(');
         }
         $compiler->raw('[');
         $first = true;
@@ -98,6 +99,9 @@ class ArrayExpression extends AbstractExpression
                 ++$nextIndex;
             } else {
                 $key = $pair['key'] instanceof ConstantExpression ? $pair['key']->getAttribute('value') : null;
+                if ($pair['key'] instanceof NameExpression) {
+                    $pair['key'] = new StringCastUnary($pair['key'], $pair['key']->getTemplateLine());
+                }
 
                 if ($nextIndex !== $key) {
                     if (\is_int($key)) {

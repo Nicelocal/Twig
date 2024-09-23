@@ -13,6 +13,7 @@ namespace Twig\Tests\Node;
 
 use Twig\Environment;
 use Twig\Loader\ArrayLoader;
+use Twig\Node\BodyNode;
 use Twig\Node\Expression\ConstantExpression;
 use Twig\Node\Expression\NameExpression;
 use Twig\Node\MacroNode;
@@ -24,7 +25,7 @@ class MacroTest extends NodeTestCase
 {
     public function testConstructor()
     {
-        $body = new TextNode('foo', 1);
+        $body = new BodyNode([new TextNode('foo', 1)]);
         $arguments = new Node([new NameExpression('foo', 1)], [], 1);
         $node = new MacroNode('foo', $body, $arguments, 1);
 
@@ -33,39 +34,58 @@ class MacroTest extends NodeTestCase
         $this->assertEquals('foo', $node->getAttribute('name'));
     }
 
-    public function getTests()
+    public static function provideTests(): iterable
     {
-        $tests = [];
-
         $arguments = new Node([
             'foo' => new ConstantExpression(null, 1),
             'bar' => new ConstantExpression('Foo', 1),
         ], [], 1);
 
-        $body = new TextNode('foo', 1);
+        $body = new BodyNode([new TextNode('foo', 1)]);
         $node = new MacroNode('foo', $body, $arguments, 1);
 
-        $text[] = [$node, <<<EOF
+        yield 'with use_yield = true' => [$node, <<<EOF
 // line 1
 public function macro_foo(\$__foo__ = null, \$__bar__ = "Foo", ...\$__varargs__)
 {
     \$macros = \$this->macros;
-    \$context = \$this->env->mergeGlobals([
+    \$context = [
         "foo" => \$__foo__,
         "bar" => \$__bar__,
         "varargs" => \$__varargs__,
-    ]);
+    ] + \$this->env->getGlobals();
 
     \$blocks = [];
 
-    return new Markup(implode('', iterator_to_array((function () use (\$context, \$macros, \$blocks) {
+    return ('' === \$tmp = implode('', iterator_to_array((function () use (&\$context, \$macros, \$blocks) {
         yield "foo";
-    })() ?? new \EmptyIterator())), \$this->env->getCharset());
+        yield from [];
+    })(), false))) ? '' : new Markup(\$tmp, \$this->env->getCharset());
 }
 EOF
-            , new Environment(new ArrayLoader()),
+            , new Environment(new ArrayLoader(), ['use_yield' => true]),
         ];
 
-        return $tests;
+        yield 'with use_yield = false' => [$node, <<<EOF
+// line 1
+public function macro_foo(\$__foo__ = null, \$__bar__ = "Foo", ...\$__varargs__)
+{
+    \$macros = \$this->macros;
+    \$context = [
+        "foo" => \$__foo__,
+        "bar" => \$__bar__,
+        "varargs" => \$__varargs__,
+    ] + \$this->env->getGlobals();
+
+    \$blocks = [];
+
+    return ('' === \$tmp = \\Twig\\Extension\\CoreExtension::captureOutput((function () use (&\$context, \$macros, \$blocks) {
+        yield "foo";
+        yield from [];
+    })())) ? '' : new Markup(\$tmp, \$this->env->getCharset());
+}
+EOF
+            , new Environment(new ArrayLoader(), ['use_yield' => false]),
+        ];
     }
 }

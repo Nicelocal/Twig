@@ -200,7 +200,7 @@ EOHTML
 
             $this->fail();
         } catch (RuntimeError $e) {
-            $this->assertEquals(sprintf('Variable "foo" does not exist in "%s" at line %d.', $name, $line), $e->getMessage());
+            $this->assertEquals(\sprintf('Variable "foo" does not exist in "%s" at line %d.', $name, $line), $e->getMessage());
             $this->assertEquals($line, $e->getTemplateLine());
             $this->assertEquals($name, $e->getSourceContext()->getName());
         }
@@ -210,7 +210,7 @@ EOHTML
 
             $this->fail();
         } catch (RuntimeError $e) {
-            $this->assertEquals(sprintf('An exception has been thrown during the rendering of a template ("Runtime error...") in "%s" at line %d.', $name, $line), $e->getMessage());
+            $this->assertEquals(\sprintf('An exception has been thrown during the rendering of a template ("Runtime error...") in "%s" at line %d.', $name, $line), $e->getMessage());
             $this->assertEquals($line, $e->getTemplateLine());
             $this->assertEquals($name, $e->getSourceContext()->getName());
         }
@@ -295,29 +295,7 @@ EOHTML
         }
     }
 
-    public function testTwigArgumentCountErrorThrowsRuntimeExceptions()
-    {
-        $loader = new ArrayLoader([
-            'argument-error.html' => <<<EOHTML
-{# max requires at least one argument #}
-{{ max() }}
-EOHTML
-        ]);
-
-        $twig = new Environment($loader, ['debug' => true, 'cache' => false]);
-
-        $template = $twig->load('argument-error.html');
-        try {
-            $template->render();
-
-            $this->fail();
-        } catch (RuntimeError $e) {
-            $this->assertEquals(2, $e->getTemplateLine());
-            $this->assertEquals('argument-error.html', $e->getSourceContext()->getName());
-        }
-    }
-
-    public function getErroredTemplates()
+    public static function getErroredTemplates()
     {
         return [
             // error occurs in a template

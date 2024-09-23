@@ -12,7 +12,8 @@ namespace Twig\Tests\Node;
  */
 
 use Twig\Environment;
-use Twig\Loader\LoaderInterface;
+use Twig\Loader\ArrayLoader;
+use Twig\Node\BodyNode;
 use Twig\Node\Expression\AssignNameExpression;
 use Twig\Node\Expression\ConditionalExpression;
 use Twig\Node\Expression\ConstantExpression;
@@ -28,7 +29,7 @@ class ModuleTest extends NodeTestCase
 {
     public function testConstructor()
     {
-        $body = new TextNode('foo', 1);
+        $body = new BodyNode([new TextNode('foo', 1)]);
         $parent = new ConstantExpression('layout.twig', 1);
         $blocks = new Node();
         $macros = new Node();
@@ -43,13 +44,13 @@ class ModuleTest extends NodeTestCase
         $this->assertEquals($source->getName(), $node->getTemplateName());
     }
 
-    public function getTests()
+    public static function provideTests(): iterable
     {
-        $twig = new Environment($this->createMock(LoaderInterface::class));
+        $twig = new Environment(new ArrayLoader(['foo.twig' => '{{ foo }}']));
 
         $tests = [];
 
-        $body = new TextNode('foo', 1);
+        $body = new BodyNode([new TextNode('foo', 1)]);
         $extends = null;
         $blocks = new Node();
         $macros = new Node();
@@ -72,12 +73,16 @@ use Twig\Sandbox\SecurityNotAllowedFilterError;
 use Twig\Sandbox\SecurityNotAllowedFunctionError;
 use Twig\Source;
 use Twig\Template;
+use Twig\TemplateWrapper;
 
 /* foo.twig */
 class __TwigTemplate_%x extends Template
 {
-    private \$source;
-    private \$macros = [];
+    private Source \$source;
+    /**
+     * @var array<string, Template>
+     */
+    private array \$macros = [];
 
     public function __construct(Environment \$env)
     {
@@ -91,18 +96,18 @@ class __TwigTemplate_%x extends Template
         ];
     }
 
-    protected function doDisplay(array \$context, array \$blocks = [])
+    protected function doDisplay(array \$context, array \$blocks = []): iterable
     {
         \$macros = \$this->macros;
         // line 1
         yield "foo";
-        return; yield '';
+        yield from [];
     }
 
     /**
      * @codeCoverageIgnore
      */
-    public function getTemplateName()
+    public function getTemplateName(): string
     {
         return "foo.twig";
     }
@@ -110,22 +115,22 @@ class __TwigTemplate_%x extends Template
     /**
      * @codeCoverageIgnore
      */
-    public function getDebugInfo()
+    public function getDebugInfo(): array
     {
-        return array (  38 => 1,);
+        return array (  42 => 1,);
     }
 
-    public function getSourceContext()
+    public function getSourceContext(): Source
     {
         return new Source("", "foo.twig", "");
     }
 }
 EOF
-        , $twig, true];
+            , $twig, true];
 
         $import = new ImportNode(new ConstantExpression('foo.twig', 1), new AssignNameExpression('macro', 1), 2);
 
-        $body = new Node([$import]);
+        $body = new BodyNode([$import]);
         $extends = new ConstantExpression('layout.twig', 1);
 
         $node = new ModuleNode($body, $extends, $blocks, $macros, $traits, new Node([]), $source);
@@ -144,12 +149,16 @@ use Twig\Sandbox\SecurityNotAllowedFilterError;
 use Twig\Sandbox\SecurityNotAllowedFunctionError;
 use Twig\Source;
 use Twig\Template;
+use Twig\TemplateWrapper;
 
 /* foo.twig */
 class __TwigTemplate_%x extends Template
 {
-    private \$source;
-    private \$macros = [];
+    private Source \$source;
+    /**
+     * @var array<string, Template>
+     */
+    private array \$macros = [];
 
     public function __construct(Environment \$env)
     {
@@ -161,13 +170,13 @@ class __TwigTemplate_%x extends Template
         ];
     }
 
-    protected function doGetParent(array \$context)
+    protected function doGetParent(array \$context): bool|string|Template|TemplateWrapper
     {
         // line 1
         return "layout.twig";
     }
 
-    protected function doDisplay(array \$context, array \$blocks = [])
+    protected function doDisplay(array \$context, array \$blocks = []): iterable
     {
         \$macros = \$this->macros;
         // line 2
@@ -180,7 +189,7 @@ class __TwigTemplate_%x extends Template
     /**
      * @codeCoverageIgnore
      */
-    public function getTemplateName()
+    public function getTemplateName(): string
     {
         return "foo.twig";
     }
@@ -188,7 +197,7 @@ class __TwigTemplate_%x extends Template
     /**
      * @codeCoverageIgnore
      */
-    public function isTraitable()
+    public function isTraitable(): bool
     {
         return false;
     }
@@ -196,21 +205,21 @@ class __TwigTemplate_%x extends Template
     /**
      * @codeCoverageIgnore
      */
-    public function getDebugInfo()
+    public function getDebugInfo(): array
     {
-        return array (  44 => 1,  42 => 2,  35 => 1,);
+        return array (  48 => 1,  46 => 2,  39 => 1,);
     }
 
-    public function getSourceContext()
+    public function getSourceContext(): Source
     {
         return new Source("", "foo.twig", "");
     }
 }
 EOF
-        , $twig, true];
+            , $twig, true];
 
         $set = new SetNode(false, new Node([new AssignNameExpression('foo', 4)]), new Node([new ConstantExpression('foo', 4)]), 4);
-        $body = new Node([$set]);
+        $body = new BodyNode([$set]);
         $extends = new ConditionalExpression(
             new ConstantExpression(true, 2),
             new ConstantExpression('foo', 2),
@@ -218,7 +227,7 @@ EOF
             2
         );
 
-        $twig = new Environment($this->createMock(LoaderInterface::class), ['debug' => true]);
+        $twig = new Environment(new ArrayLoader(['foo.twig' => '{{ foo }}']), ['debug' => true]);
         $node = new ModuleNode($body, $extends, $blocks, $macros, $traits, new Node([]), $source);
         $tests[] = [$node, <<<EOF
 <?php
@@ -235,12 +244,16 @@ use Twig\Sandbox\SecurityNotAllowedFilterError;
 use Twig\Sandbox\SecurityNotAllowedFunctionError;
 use Twig\Source;
 use Twig\Template;
+use Twig\TemplateWrapper;
 
 /* foo.twig */
 class __TwigTemplate_%x extends Template
 {
-    private \$source;
-    private \$macros = [];
+    private Source \$source;
+    /**
+     * @var array<string, Template>
+     */
+    private array \$macros = [];
 
     public function __construct(Environment \$env)
     {
@@ -252,13 +265,13 @@ class __TwigTemplate_%x extends Template
         ];
     }
 
-    protected function doGetParent(array \$context)
+    protected function doGetParent(array \$context): bool|string|Template|TemplateWrapper
     {
         // line 2
         return \$this->loadTemplate(((true) ? ("foo") : ("foo")), "foo.twig", 2);
     }
 
-    protected function doDisplay(array \$context, array \$blocks = [])
+    protected function doDisplay(array \$context, array \$blocks = []): iterable
     {
         \$macros = \$this->macros;
         // line 4
@@ -270,7 +283,7 @@ class __TwigTemplate_%x extends Template
     /**
      * @codeCoverageIgnore
      */
-    public function getTemplateName()
+    public function getTemplateName(): string
     {
         return "foo.twig";
     }
@@ -278,7 +291,7 @@ class __TwigTemplate_%x extends Template
     /**
      * @codeCoverageIgnore
      */
-    public function isTraitable()
+    public function isTraitable(): bool
     {
         return false;
     }
@@ -286,18 +299,18 @@ class __TwigTemplate_%x extends Template
     /**
      * @codeCoverageIgnore
      */
-    public function getDebugInfo()
+    public function getDebugInfo(): array
     {
-        return array (  44 => 2,  42 => 4,  35 => 2,);
+        return array (  48 => 2,  46 => 4,  39 => 2,);
     }
 
-    public function getSourceContext()
+    public function getSourceContext(): Source
     {
         return new Source("{{ foo }}", "foo.twig", "");
     }
 }
 EOF
-        , $twig, true];
+            , $twig, true];
 
         return $tests;
     }

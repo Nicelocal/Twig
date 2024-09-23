@@ -34,7 +34,7 @@ class IncludeTest extends NodeTestCase
         $this->assertTrue($node->getAttribute('only'));
     }
 
-    public function getTests()
+    public static function provideTests(): iterable
     {
         $tests = [];
 
@@ -64,7 +64,7 @@ EOF
         $node = new IncludeNode($expr, $vars, false, false, 1);
         $tests[] = [$node, <<<'EOF'
 // line 1
-yield from $this->loadTemplate("foo.twig", null, 1)->unwrap()->yield(CoreExtension::arrayMerge($context, ["foo" => true]));
+yield from $this->loadTemplate("foo.twig", null, 1)->unwrap()->yield(CoreExtension::merge($context, ["foo" => true]));
 EOF
         ];
 
@@ -88,7 +88,7 @@ if (\$__internal_%s) {
     yield from \$__internal_%s->unwrap()->yield(CoreExtension::toArray(["foo" => true]));
 }
 EOF
-        , null, true];
+            , null, true];
 
         return $tests;
     }

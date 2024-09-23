@@ -47,8 +47,8 @@ IDEs Integration
 Many IDEs support syntax highlighting and auto-completion for Twig:
 
 * *Textmate* via the `Twig bundle`_
-* *Vim* via the `Jinja syntax plugin`_ or the `vim-twig plugin`_
-* *Netbeans* via the `Twig syntax plugin`_ (until 7.1, native as of 7.2)
+* *Vim* via the `vim-twig plugin`_
+* *Netbeans* (native as of 7.2)
 * *PhpStorm* (native as of 2.1)
 * *Eclipse* via the `Twig plugin`_
 * *Sublime Text* via the `Twig bundle`_
@@ -72,17 +72,16 @@ You might also be interested in:
 Variables
 ---------
 
-The application passes variables to the templates for manipulation in the
-template. Variables may have attributes or elements you can access, too. The
-visual representation of a variable depends heavily on the application providing
-it.
+Twig templates have access to variables provided by the PHP application and
+variables created in templates via the :doc:`set <tags/set>` tag. These
+variables can be manipulated and displayed in the template.
 
 Use a dot (``.``) to access attributes of a variable (methods or properties of a
 PHP object, or items of a PHP array):
 
 .. code-block:: twig
 
-    {{ foo.bar }}
+    {{ user.name }}
 
 .. note::
 
@@ -97,41 +96,7 @@ If a variable or attribute does not exist, the behavior depends on the
 * When ``false``, it returns ``null``;
 * When ``true``, it throws an exception.
 
-.. sidebar:: Implementation
-
-    For convenience's sake ``foo.bar`` does the following things on the PHP
-    layer:
-
-    * check if ``foo`` is an array and ``bar`` a valid element;
-    * if not, and if ``foo`` is an object, check that ``bar`` is a valid property;
-    * if not, and if ``foo`` is an object, check that ``bar`` is a valid method
-      (even if ``bar`` is the constructor - use ``__construct()`` instead);
-    * if not, and if ``foo`` is an object, check that ``getBar`` is a valid method;
-    * if not, and if ``foo`` is an object, check that ``isBar`` is a valid method;
-    * if not, and if ``foo`` is an object, check that ``hasBar`` is a valid method;
-    * if not, and if ``strict_variables`` is ``false``, return ``null``;
-    * if not, throw an exception.
-
-    Twig also supports a specific syntax for accessing items on PHP arrays,
-    ``foo['bar']``:
-
-    * check if ``foo`` is an array and ``bar`` a valid element;
-    * if not, and if ``strict_variables`` is ``false``, return ``null``;
-    * if not, throw an exception.
-
-.. note::
-
-    If you want to access a dynamic attribute of a variable, use the
-    :doc:`attribute<functions/attribute>` function instead.
-
-    The ``attribute`` function is also useful when the attribute contains
-    special characters (like ``-`` that would be interpreted as the minus
-    operator):
-
-    .. code-block:: twig
-
-        {# equivalent to the non-working foo.data-foo #}
-        {{ attribute(foo, 'data-foo') }}
+Learn more about the :ref:`dot operator <dot_operator>`.
 
 Global Variables
 ~~~~~~~~~~~~~~~~
@@ -150,9 +115,9 @@ You can assign values to variables inside code blocks. Assignments use the
 
 .. code-block:: twig
 
-    {% set foo = 'foo' %}
-    {% set foo = [1, 2] %}
-    {% set foo = {'foo': 'bar'} %}
+    {% set name = 'Fabien' %}
+    {% set numbers = [1, 2] %}
+    {% set map = {'city': 'Paris'} %}
 
 Filters
 -------
@@ -210,11 +175,16 @@ built-in functions.
 Named Arguments
 ---------------
 
-Named arguments are supported in functions, filters and tests.
+Named arguments are supported in functions, filters, and tests.
+
+.. versionadded:: 3.12
+
+    Twig supports both ``=`` and ``:`` as separators between argument names and
+    values, but support for ``:`` was introduced in Twig 3.12.
 
 .. code-block:: twig
 
-    {% for i in range(low=1, high=10, step=2) %}
+    {% for i in range(low: 1, high: 10, step: 2) %}
         {{ i }},
     {% endfor %}
 
@@ -227,7 +197,7 @@ the values you pass as arguments:
 
     {# versus #}
 
-    {{ data|convert_encoding(from='iso-2022-jp', to='UTF-8') }}
+    {{ data|convert_encoding(from: 'iso-2022-jp', to: 'UTF-8') }}
 
 Named arguments also allow you to skip some arguments for which you don't want
 to change the default value:
@@ -238,19 +208,19 @@ to change the default value:
     {{ "now"|date(null, "Europe/Paris") }}
 
     {# or skip the format value by using a named argument for the time zone #}
-    {{ "now"|date(timezone="Europe/Paris") }}
+    {{ "now"|date(timezone: "Europe/Paris") }}
 
 You can also use both positional and named arguments in one call, in which
 case positional arguments must always come before named arguments:
 
 .. code-block:: twig
 
-    {{ "now"|date('d/m/Y H:i', timezone="Europe/Paris") }}
+    {{ "now"|date('d/m/Y H:i', timezone: "Europe/Paris") }}
 
 .. tip::
 
-    Each function and filter documentation page has a section where the names
-    of all arguments are listed when supported.
+    Each function, filter, and test documentation page has a section where the
+    names of all supported arguments are listed.
 
 Control Structure
 -----------------
@@ -360,7 +330,7 @@ document that might be used for a two-column page:
             <div id="content">{% block content %}{% endblock %}</div>
             <div id="footer">
                 {% block footer %}
-                    &copy; Copyright 2011 by <a href="http://domain.invalid/">you</a>.
+                    &copy; Copyright 2011 by <a href="https://example.com/">you</a>.
                 {% endblock %}
             </div>
         </body>
@@ -512,26 +482,6 @@ Expressions
 
 Twig allows expressions everywhere.
 
-.. note::
-
-    The operator precedence is as follows, with the lowest-precedence operators
-    listed first: ``?:`` (ternary operator), ``b-and``, ``b-xor``, ``b-or``,
-    ``or``, ``and``, ``==``, ``!=``, ``<=>``, ``<``, ``>``, ``>=``, ``<=``,
-    ``in``, ``matches``, ``starts with``, ``ends with``, ``has every``, ``has
-    some``, ``..``, ``+``, ``-``,
-    ``~``, ``*``, ``/``, ``//``, ``%``, ``is`` (tests), ``**``, ``??``, ``|``
-    (filters), ``[]``, and ``.``:
-
-    .. code-block:: twig
-
-        {% set greeting = 'Hello ' %}
-        {% set name = 'Fabien' %}
-
-        {{ greeting ~ name|lower }}   {# Hello fabien #}
-
-        {# use parenthesis to change precedence #}
-        {{ (greeting ~ name)|lower }} {# hello fabien #}
-
 Literals
 ~~~~~~~~
 
@@ -542,40 +492,55 @@ exist:
 * ``"Hello World"``: Everything between two double or single quotes is a
   string. They are useful whenever you need a string in the template (for
   example as arguments to function calls, filters or just to extend or include
-  a template). A string can contain a delimiter if it is preceded by a
-  backslash (``\``) -- like in ``'It\'s good'``. If the string contains a
-  backslash (e.g. ``'c:\Program Files'``) escape it by doubling it
-  (e.g. ``'c:\\Program Files'``).
+  a template).
+
+  Note that certain characters require escaping:
+   * ``\f``: Form feed
+   * ``\n``: New line
+   * ``\r``: Carriage return
+   * ``\t``: Horizontal tab
+   * ``\v``: Vertical tab
+   * ``\x``: Hexadecimal escape sequence
+   * ``\0`` to ``\377``: Octal escape sequences representing characters
+   * ``\``: Backslash
+  
+   When using single-quoted strings, the single quote character (``'``) needs to be escaped with a backslash (``\'``).
+   When using double-quoted strings, the double quote character (``"``) needs to be escaped with a backslash (``\"``).
+
+   For example, a single quoted string can contain a delimiter if it is preceded by a
+   backslash (``\``) -- like in ``'It\'s good'``. If the string contains a
+   backslash (e.g. ``'c:\Program Files'``) escape it by doubling it
+   (e.g. ``'c:\\Program Files'``).
 
 * ``42`` / ``42.23``: Integers and floating point numbers are created by
   writing the number down. If a dot is present the number is a float,
   otherwise an integer.
 
-* ``["foo", "bar"]``: Arrays are defined by a sequence of expressions
+* ``["first_name", "last_name"]``: Sequences are defined by a sequence of expressions
   separated by a comma (``,``) and wrapped with squared brackets (``[]``).
 
-* ``{"foo": "bar"}``: Hashes are defined by a list of keys and values
+* ``{"name": "Fabien"}``: Mappings are defined by a list of keys and values
   separated by a comma (``,``) and wrapped with curly braces (``{}``):
 
   .. code-block:: twig
 
     {# keys as string #}
-    { 'foo': 'foo', 'bar': 'bar' }
+    {'name': 'Fabien', 'city': 'Paris'}
 
-    {# keys as names (equivalent to the previous hash) #}
-    { foo: 'foo', bar: 'bar' }
+    {# keys as names (equivalent to the previous mapping) #}
+    {name: 'Fabien', city: 'Paris'}
 
     {# keys as integer #}
-    { 2: 'foo', 4: 'bar' }
+    {2: 'Twig', 4: 'Symfony'}
 
     {# keys can be omitted if it is the same as the variable name #}
-    { foo }
+    {Paris}
     {# is equivalent to the following #}
-    { 'foo': foo }
+    {'Paris': Paris}
 
     {# keys as expressions (the expression must be enclosed into parentheses) #}
-    {% set foo = 'foo' %}
-    { (foo): 'foo', (1 + 1): 'bar', (foo ~ 'b'): 'baz' }
+    {% set key = 'name' %}
+    {(key): 'Fabien', (1 + 1): 2, ('ci' ~ 'ty'): 'city'}
 
 * ``true`` / ``false``: ``true`` represents the true value, ``false``
   represents the false value.
@@ -583,17 +548,41 @@ exist:
 * ``null``: ``null`` represents no specific value. This is the value returned
   when a variable does not exist. ``none`` is an alias for ``null``.
 
-Arrays and hashes can be nested:
+Sequences and mappings can be nested:
 
 .. code-block:: twig
 
-    {% set foo = [1, {"foo": "bar"}] %}
+    {% set complex = [1, {"name": "Fabien"}] %}
 
 .. tip::
 
     Using double-quoted or single-quoted strings has no impact on performance
     but :ref:`string interpolation <templates-string-interpolation>` is only
     supported in double-quoted strings.
+
+.. _templates-string-interpolation:
+
+String Interpolation
+~~~~~~~~~~~~~~~~~~~~
+
+String interpolation (``#{expression}``) allows any valid expression to appear
+within a *double-quoted string*. The result of evaluating that expression is
+inserted into the string:
+
+.. code-block:: twig
+
+    {{ "first #{middle} last" }}
+    {{ "first #{1 + 2} last" }}
+
+.. tip::
+
+    String interpolations can be ignored by escaping them with a backslash
+    (``\``):
+
+    .. code-block:: twig
+
+        {# outputs first #{1 + 2} last #}
+        {{ "first \#{1 + 2} last" }}
 
 Math
 ~~~~
@@ -704,8 +693,8 @@ operand is contained in the right:
 
 .. tip::
 
-    You can use this filter to perform a containment test on strings, arrays,
-    or objects implementing the ``Traversable`` interface.
+    You can use this filter to perform a containment test on strings,
+    sequences, mappings, or objects implementing the ``Traversable`` interface.
 
 To perform a negative test, use the ``not in`` operator:
 
@@ -774,44 +763,155 @@ The following operators don't fit into any of the other categories:
   " ~ name ~ "!" }}`` would return (assuming ``name`` is ``'John'``) ``Hello
   John!``.
 
+.. _dot_operator:
+
 * ``.``, ``[]``: Gets an attribute of a variable.
+
+  The (``.``) operator abstracts getting an attribute of a variable (methods
+  or properties of a PHP object, or items of a PHP array):
+
+  .. code-block:: twig
+
+      {{ user.name }}
+
+  After the ``.``, you can use any expression by wrapping it with parenthesis
+  ``()``.
+
+  One use case is when the attribute contains special characters (like ``-``
+  that would be interpreted as the minus operator):
+
+  .. code-block:: twig
+
+      {# equivalent to the non-working user.first-name #}
+      {{ user.('first-name') }}
+
+  Another use case is when the attribute is "dynamic" (defined via a variable):
+
+  .. code-block:: twig
+
+      {{ user.(name) }}
+      {{ user.('get' ~ name) }}
+
+  Before Twig 3.15, use the :doc:`attribute <functions/attribute>` function
+  instead for the two previous use cases.
+
+  .. sidebar:: PHP Implementation
+
+      To resolve ``user.name`` to a PHP call, Twig uses the following algorithm
+      at runtime:
+
+      * check if ``user`` is a PHP array or a ArrayObject/ArrayAccess object and
+        ``name`` a valid element;
+      * if not, and if ``user`` is a PHP object, check that ``name`` is a valid property;
+      * if not, and if ``user`` is a PHP object, check the following methods and
+        call the first valid one: ``name()``, ``getName()``, ``isName()``, or
+        ``hasName()``;
+      * if not, and if ``strict_variables`` is ``false``, return ``null``;
+      * if not, throw an exception.
+
+      Twig supports a specific syntax via the ``[]`` operator for accessing items
+      on sequences and mappings, like in ``user['name']``:
+
+      * check if ``user`` is an array and ``name`` a valid element;
+      * if not, and if ``strict_variables`` is ``false``, return ``null``;
+      * if not, throw an exception.
+
+      Twig supports a specific syntax via the ``()`` operator for calling methods
+      on objects, like in ``user.name()``:
+
+      * check if ``user`` is a object and has the ``name()``, ``getName()``,
+        ``isName()``, or ``hasName()`` method;
+      * if not, and if ``strict_variables`` is ``false``, return ``null``;
+      * if not, throw an exception.
 
 * ``?:``: The ternary operator:
 
   .. code-block:: twig
 
-      {{ foo ? 'yes' : 'no' }}
-      {{ foo ?: 'no' }} is the same as {{ foo ? foo : 'no' }}
-      {{ foo ? 'yes' }} is the same as {{ foo ? 'yes' : '' }}
+      {{ result ? 'yes' : 'no' }}
+      {{ result ?: 'no' }} is the same as {{ result ? result : 'no' }}
+      {{ result ? 'yes' }} is the same as {{ result ? 'yes' : '' }}
 
 * ``??``: The null-coalescing operator:
 
   .. code-block:: twig
 
-      {# returns the value of foo if it is defined and not null, 'no' otherwise #}
-      {{ foo ?? 'no' }}
+      {# returns the value of result if it is defined and not null, 'no' otherwise #}
+      {{ result ?? 'no' }}
 
-* ``...``: The spread operator can be used to expand arrays or hashes (it cannot
-  be used to expand the arguments of a function call):
+* ``...``: The spread operator can be used to expand sequences or mappings or
+  to expand the arguments of a function call:
 
   .. code-block:: twig
 
       {% set numbers = [1, 2, ...moreNumbers] %}
-      {% set ratings = { 'foo': 10, 'bar': 5, ...moreRatings } %}
+      {% set ratings = {'q1': 10, 'q2': 5, ...moreRatings} %}
 
-.. _templates-string-interpolation:
+      {{ 'Hello %s %s!'|format(...['Fabien', 'Potencier']) }}
 
-String Interpolation
-~~~~~~~~~~~~~~~~~~~~
+  .. versionadded:: 3.15
 
-String interpolation (``#{expression}``) allows any valid expression to appear
-within a *double-quoted string*. The result of evaluating that expression is
-inserted into the string:
+    Support for expanding the arguments of a function call was introduced in
+    Twig 3.15.
+
+Operators
+~~~~~~~~~
+
+Twig uses operators to perform various operations within templates.
+Understanding the precedence of these operators is crucial for writing correct
+and efficient Twig templates.
+
+The operator precedence rules are as follows, with the lowest-precedence
+operators listed first:
+
+=============================  =================================== =====================================================
+Operator                       Score of precedence                 Description
+=============================  =================================== =====================================================
+``?:``                         0                                   Ternary operator, conditional statement
+``or``                         10                                  Logical OR operation between two boolean expressions
+``and``                        15                                  Logical AND operation between two boolean expressions
+``b-or``                       16                                  Bitwise OR operation on integers
+``b-xor``                      17                                  Bitwise XOR operation on integers
+``b-and``                      18                                  Bitwise AND operation on integers
+``==``, ``!=``, ``<=>``,       20                                  Comparison operators
+``<``, ``>``, ``>=``,
+``<=``, ``not in``, ``in``,
+``matches``, ``starts with``,
+``ends with``, ``has some``,
+``has every``
+``..``                         25                                  Range of values
+``+``, ``-``                   30                                  Addition and subtraction on numbers
+``~``                          40                                  String concatenation
+``not``                        50                                  Negates a statement
+``*``, ``/``, ``//``, ``%``    60                                  Arithmetic operations on numbers
+``is``, ``is not``             100                                 Tests
+``**``                         200                                 Raises a number to the power of another
+``??``                         300                                 Default value when a variable is null
+``+``, ``-``                   500                                 Unary operations on numbers
+``|``,``[]``,``.``             -                                   Filters, sequence, mapping, and attribute access
+=============================  =================================== =====================================================
+
+Without using any parentheses, the operator precedence rules are used to
+determine how to convert the code to PHP:
 
 .. code-block:: twig
 
-    {{ "foo #{bar} baz" }}
-    {{ "foo #{1 + 2} baz" }}
+    {{ 6 b-and 2 or 6 b-and 16 }}
+
+    {# it is converted to the following PHP code: (6 & 2) || (6 & 16) #}
+
+Change the default precedence by explicitly grouping expressions with
+parentheses:
+
+.. code-block:: twig
+
+    {% set greeting = 'Hello ' %}
+    {% set name = 'Fabien' %}
+
+    {{ greeting ~ name|lower }}   {# Hello fabien #}
+
+    {# use parenthesis to change precedence #}
+    {{ (greeting ~ name)|lower }} {# hello fabien #}
 
 .. _templates-whitespace-control:
 
@@ -859,37 +959,20 @@ the modifiers on one side of a tag or on both sides:
         {{~ value }}    </li>
     {# outputs '<li>\nno spaces    </li>' #}
 
-.. tip::
-
-    In addition to the whitespace modifiers, Twig also has a ``spaceless`` filter
-    that removes whitespace **between HTML tags**:
-
-    .. code-block:: html+twig
-
-        {% apply spaceless %}
-            <div>
-                <strong>foo bar</strong>
-            </div>
-        {% endapply %}
-
-        {# output will be <div><strong>foo bar</strong></div> #}
-
 Extensions
 ----------
 
 Twig can be extended. If you want to create your own extensions, read the
 :ref:`Creating an Extension <creating_extensions>` chapter.
 
-.. _`Twig bundle`:                https://github.com/Anomareh/PHP-Twig.tmbundle
-.. _`Jinja syntax plugin`:        http://jinja.pocoo.org/docs/integration/#vim
+.. _`Twig bundle`:                https://github.com/uhnomoli/PHP-Twig.tmbundle
 .. _`vim-twig plugin`:            https://github.com/lumiliet/vim-twig
-.. _`Twig syntax plugin`:         http://plugins.netbeans.org/plugin/37069/php-twig
 .. _`Twig plugin`:                https://github.com/pulse00/Twig-Eclipse-Plugin
 .. _`Twig language definition`:   https://github.com/gabrielcorpse/gedit-twig-template-language
 .. _`Twig syntax mode`:           https://github.com/bobthecow/Twig-HTML.mode
 .. _`other Twig syntax mode`:     https://github.com/muxx/Twig-HTML.mode
 .. _`Notepad++ Twig Highlighter`: https://github.com/Banane9/notepadplusplus-twig
-.. _`web-mode.el`:                http://web-mode.org/
+.. _`web-mode.el`:                https://web-mode.org/
 .. _`regular expressions`:        https://www.php.net/manual/en/pcre.pattern.php
 .. _`PHP-twig for atom`:          https://github.com/reesef/php-twig
 .. _`TwigFiddle`:                 https://twigfiddle.com/

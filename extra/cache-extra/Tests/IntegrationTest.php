@@ -30,17 +30,15 @@ class IntegrationTest extends IntegrationTestCase
     {
         return [
             new class() implements RuntimeLoaderInterface {
-                public function load($class)
+                public function load(string $class): ?object
                 {
-                    if (CacheRuntime::class === $class) {
-                        return new CacheRuntime(new ArrayAdapter());
-                    }
+                    return CacheRuntime::class === $class ? new CacheRuntime(new ArrayAdapter()) : null;
                 }
             },
         ];
     }
 
-    public function getFixturesDir()
+    protected static function getFixturesDirectory(): string
     {
         return __DIR__.'/Fixtures/';
     }

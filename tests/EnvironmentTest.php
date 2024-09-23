@@ -38,6 +38,21 @@ class EnvironmentTest extends TestCase
 {
     use ExpectDeprecationTrait;
 
+    public function testVersionConstants()
+    {
+        $version = Environment::VERSION;
+        $exploded = explode('-', $version);
+        $this->assertEquals(Environment::EXTRA_VERSION, $exploded[1] ?? '');
+
+        $version = $exploded[0];
+        $exploded = explode('.', $version);
+        $this->assertEquals(Environment::MAJOR_VERSION, $exploded[0]);
+        $this->assertEquals(Environment::MINOR_VERSION, $exploded[1]);
+        $this->assertEquals(Environment::RELEASE_VERSION, $exploded[2]);
+
+        $this->assertEquals(Environment::VERSION_ID, Environment::MAJOR_VERSION * 10000 + Environment::MINOR_VERSION * 100 + Environment::RELEASE_VERSION);
+    }
+
     public function testAutoescapeOption()
     {
         $loader = new ArrayLoader([
@@ -163,19 +178,26 @@ class EnvironmentTest extends TestCase
 
         // force compilation
         $twig = new Environment($loader = new ArrayLoader(['index' => '{{ foo }}']), $options);
+        $twig->addExtension($extension = new class() extends AbstractExtension {
+            public bool $throw = false;
+
+            public function getFilters(): array
+            {
+                if ($this->throw) {
+                    throw new \RuntimeException('Extension are not supposed to be initialized.');
+                }
+
+                return parent::getFilters();
+            }
+        });
 
         $key = $cache->generateKey('index', $twig->getTemplateClass('index'));
         $cache->write($key, $twig->compileSource(new Source('{{ foo }}', 'index')));
 
         // check that extensions won't be initialized when rendering a template that is already in the cache
-        $twig = $this
-            ->getMockBuilder(Environment::class)
-            ->setConstructorArgs([$loader, $options])
-            ->setMethods(['initExtensions'])
-            ->getMock()
-        ;
-
-        $twig->expects($this->never())->method('initExtensions');
+        $twig = new Environment($loader, $options);
+        $extension->throw = true;
+        $twig->addExtension($extension);
 
         // render template
         $output = $twig->render('index', ['foo' => 'bar']);
@@ -269,15 +291,15 @@ class EnvironmentTest extends TestCase
 
     public function testHasGetExtensionByClassName()
     {
-        $twig = new Environment($this->createMock(LoaderInterface::class));
+        $twig = new Environment(new ArrayLoader());
         $twig->addExtension($ext = new EnvironmentTest_Extension());
-        $this->assertSame($ext, $twig->getExtension('Twig\Tests\EnvironmentTest_Extension'));
-        $this->assertSame($ext, $twig->getExtension('\Twig\Tests\EnvironmentTest_Extension'));
+        $this->assertSame($ext, $twig->getExtension(EnvironmentTest_Extension::class));
+        $this->assertSame($ext, $twig->getExtension(EnvironmentTest_Extension::class));
     }
 
     public function testAddExtension()
     {
-        $twig = new Environment($this->createMock(LoaderInterface::class));
+        $twig = new Environment(new ArrayLoader());
         $twig->addExtension(new EnvironmentTest_Extension());
 
         $this->assertArrayHasKey('test', $twig->getTokenParsers());
@@ -311,12 +333,12 @@ class EnvironmentTest extends TestCase
 
     public function testOverrideExtension()
     {
+        $twig = new Environment(new ArrayLoader());
+        $twig->addExtension(new EnvironmentTest_Extension());
+
         $this->expectException(\LogicException::class);
         $this->expectExceptionMessage('Unable to register extension "Twig\Tests\EnvironmentTest_Extension" as it is already registered.');
 
-        $twig = new Environment($this->createMock(LoaderInterface::class));
-
-        $twig->addExtension(new EnvironmentTest_Extension());
         $twig->addExtension(new EnvironmentTest_Extension());
     }
 
@@ -334,7 +356,7 @@ class EnvironmentTest extends TestCase
             'func_string_named_args' => '{{ from_runtime_string(name="foo") }}',
         ]);
 
-        $twig = new Environment($loader);
+        $twig = new Environment($loader, ['autoescape' => false]);
         $twig->addExtension(new EnvironmentTest_ExtensionWithoutRuntime());
         $twig->addRuntimeLoader($runtimeLoader);
 
@@ -348,17 +370,18 @@ class EnvironmentTest extends TestCase
 
     public function testFailLoadTemplate()
     {
+        $template = 'testFailLoadTemplate.twig';
+        $twig = new Environment(new ArrayLoader([$template => false]));
+
         $this->expectException(RuntimeError::class);
         $this->expectExceptionMessage('Failed to load Twig template "testFailLoadTemplate.twig", index "112233": cache might be corrupted in "testFailLoadTemplate.twig".');
 
-        $template = 'testFailLoadTemplate.twig';
-        $twig = new Environment(new ArrayLoader([$template => false]));
         $twig->loadTemplate($twig->getTemplateClass($template), $template, 112233);
     }
 
     public function testUndefinedFunctionCallback()
     {
-        $twig = new Environment($this->createMock(LoaderInterface::class));
+        $twig = new Environment(new ArrayLoader());
         $twig->registerUndefinedFunctionCallback(function (string $name) {
             if ('dynamic' === $name) {
                 return new TwigFunction('dynamic', function () { return 'dynamic'; });
@@ -374,7 +397,7 @@ class EnvironmentTest extends TestCase
 
     public function testUndefinedFilterCallback()
     {
-        $twig = new Environment($this->createMock(LoaderInterface::class));
+        $twig = new Environment(new ArrayLoader());
         $twig->registerUndefinedFilterCallback(function (string $name) {
             if ('dynamic' === $name) {
                 return new TwigFilter('dynamic', function () { return 'dynamic'; });
@@ -390,7 +413,7 @@ class EnvironmentTest extends TestCase
 
     public function testUndefinedTokenParserCallback()
     {
-        $twig = new Environment($this->createMock(LoaderInterface::class));
+        $twig = new Environment(new ArrayLoader());
         $twig->registerUndefinedTokenParserCallback(function (string $name) {
             if ('dynamic' === $name) {
                 $parser = $this->createMock(TokenParserInterface::class);
@@ -414,7 +437,7 @@ class EnvironmentTest extends TestCase
      */
     public function testLegacyEchoingNode()
     {
-        $loader = new ArrayLoader(['echo_bar' => 'A{% set v %}B{% test %}C{% endset %}D{% test %}E{{ v }}F']);
+        $loader = new ArrayLoader(['echo_bar' => 'A{% set v %}B{% test %}C{% endset %}D{% test %}E{{ v }}F{% set w %}{% test %}{% endset %}G{{ w }}H']);
 
         $twig = new Environment($loader);
         $twig->addExtension(new EnvironmentTest_Extension());
@@ -430,7 +453,7 @@ EOF
             );
         }
 
-        $this->assertSame('ADbarEBbarCF', $twig->render('echo_bar'));
+        $this->assertSame('ADbarEBbarCFGbarH', $twig->render('echo_bar'));
     }
 
     protected function getMockLoader($templateName, $templateContent)
@@ -446,6 +469,33 @@ EOF
           ->willReturn($templateName);
 
         return $loader;
+    }
+
+    public function testResettingGlobals()
+    {
+        $twig = new Environment(new ArrayLoader(['index' => '']));
+        $twig->addExtension(new class() extends AbstractExtension implements GlobalsInterface {
+            public function getGlobals(): array
+            {
+                return [
+                    'global_ext' => bin2hex(random_bytes(16)),
+                ];
+            }
+        });
+
+        // Force extensions initialization
+        $twig->load('index');
+
+        // Simulate request
+        $g1 = $twig->getGlobals();
+        // Simulate another call from request 1 (the globals are cached)
+        $g2 = $twig->getGlobals();
+        $this->assertSame($g1['global_ext'], $g2['global_ext']);
+
+        // Simulate request 2
+        $twig->resetGlobals();
+        $g3 = $twig->getGlobals();
+        $this->assertNotSame($g3['global_ext'], $g2['global_ext']);
     }
 }
 
@@ -518,7 +568,7 @@ class EnvironmentTest_TokenParser extends AbstractTokenParser
     {
         $this->parser->getStream()->expect(Token::BLOCK_END_TYPE);
 
-        return new EnvironmentTest_LegacyEchoingNode();
+        return new EnvironmentTest_LegacyEchoingNode([], [], 1);
     }
 
     public function getTag(): string

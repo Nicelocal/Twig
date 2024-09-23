@@ -12,20 +12,23 @@ namespace Twig\Tests;
  */
 
 use PHPUnit\Framework\TestCase;
+use Symfony\Bridge\PhpUnit\ExpectDeprecationTrait;
 use Twig\Environment;
 use Twig\Error\SyntaxError;
 use Twig\Lexer;
-use Twig\Loader\LoaderInterface;
+use Twig\Loader\ArrayLoader;
 use Twig\Source;
 use Twig\Token;
 
 class LexerTest extends TestCase
 {
+    use ExpectDeprecationTrait;
+
     public function testNameLabelForTag()
     {
         $template = '{% § %}';
 
-        $lexer = new Lexer(new Environment($this->createMock(LoaderInterface::class)));
+        $lexer = new Lexer(new Environment(new ArrayLoader()));
         $stream = $lexer->tokenize(new Source($template, 'index'));
 
         $stream->expect(Token::BLOCK_START_TYPE);
@@ -36,7 +39,7 @@ class LexerTest extends TestCase
     {
         $template = '{{ §() }}';
 
-        $lexer = new Lexer(new Environment($this->createMock(LoaderInterface::class)));
+        $lexer = new Lexer(new Environment(new ArrayLoader()));
         $stream = $lexer->tokenize(new Source($template, 'index'));
 
         $stream->expect(Token::VAR_START_TYPE);
@@ -63,7 +66,7 @@ class LexerTest extends TestCase
 
     protected function countToken($template, $type, $value = null)
     {
-        $lexer = new Lexer(new Environment($this->createMock(LoaderInterface::class)));
+        $lexer = new Lexer(new Environment(new ArrayLoader()));
         $stream = $lexer->tokenize(new Source($template, 'index'));
 
         $count = 0;
@@ -88,7 +91,7 @@ class LexerTest extends TestCase
             ."baz\n"
             ."}}\n";
 
-        $lexer = new Lexer(new Environment($this->createMock(LoaderInterface::class)));
+        $lexer = new Lexer(new Environment(new ArrayLoader()));
         $stream = $lexer->tokenize(new Source($template, 'index'));
 
         // foo\nbar\n
@@ -108,7 +111,7 @@ class LexerTest extends TestCase
             ."baz\n"
             ."}}\n";
 
-        $lexer = new Lexer(new Environment($this->createMock(LoaderInterface::class)));
+        $lexer = new Lexer(new Environment(new ArrayLoader()));
         $stream = $lexer->tokenize(new Source($template, 'index'));
 
         // foo\nbar
@@ -123,7 +126,7 @@ class LexerTest extends TestCase
     {
         $template = '{# '.str_repeat('*', 100000).' #}';
 
-        $lexer = new Lexer(new Environment($this->createMock(LoaderInterface::class)));
+        $lexer = new Lexer(new Environment(new ArrayLoader()));
         $lexer->tokenize(new Source($template, 'index'));
 
         // add a dummy assertion here to satisfy PHPUnit, the only thing we want to test is that the code above
@@ -135,7 +138,7 @@ class LexerTest extends TestCase
     {
         $template = '{% verbatim %}'.str_repeat('*', 100000).'{% endverbatim %}';
 
-        $lexer = new Lexer(new Environment($this->createMock(LoaderInterface::class)));
+        $lexer = new Lexer(new Environment(new ArrayLoader()));
         $lexer->tokenize(new Source($template, 'index'));
 
         // add a dummy assertion here to satisfy PHPUnit, the only thing we want to test is that the code above
@@ -147,7 +150,7 @@ class LexerTest extends TestCase
     {
         $template = '{{ '.str_repeat('x', 100000).' }}';
 
-        $lexer = new Lexer(new Environment($this->createMock(LoaderInterface::class)));
+        $lexer = new Lexer(new Environment(new ArrayLoader()));
         $lexer->tokenize(new Source($template, 'index'));
 
         // add a dummy assertion here to satisfy PHPUnit, the only thing we want to test is that the code above
@@ -159,7 +162,7 @@ class LexerTest extends TestCase
     {
         $template = '{% '.str_repeat('x', 100000).' %}';
 
-        $lexer = new Lexer(new Environment($this->createMock(LoaderInterface::class)));
+        $lexer = new Lexer(new Environment(new ArrayLoader()));
         $lexer->tokenize(new Source($template, 'index'));
 
         // add a dummy assertion here to satisfy PHPUnit, the only thing we want to test is that the code above
@@ -171,37 +174,104 @@ class LexerTest extends TestCase
     {
         $template = '{{ 922337203685477580700 }}';
 
-        $lexer = new Lexer(new Environment($this->createMock(LoaderInterface::class)));
+        $lexer = new Lexer(new Environment(new ArrayLoader()));
         $stream = $lexer->tokenize(new Source($template, 'index'));
         $stream->next();
         $node = $stream->next();
         $this->assertEquals('922337203685477580700', $node->getValue());
     }
 
-    public function testStringWithEscapedDelimiter()
+    /**
+     * @dataProvider getStringWithEscapedDelimiter
+     */
+    public function testStringWithEscapedDelimiter(string $template, string $expected)
     {
-        $tests = [
-            "{{ 'foo \' bar' }}" => 'foo \' bar',
-            '{{ "foo \" bar" }}' => 'foo " bar',
+        $lexer = new Lexer(new Environment(new ArrayLoader()));
+        $stream = $lexer->tokenize(new Source($template, 'index'));
+        $stream->expect(Token::VAR_START_TYPE);
+        $token = $stream->expect(Token::STRING_TYPE);
+        $this->assertSame($expected, $token->getValue());
+    }
+
+    public static function getStringWithEscapedDelimiter()
+    {
+        yield '{{ \'\x6\' }} => \x6' => [
+            '{{ \'\x6\' }}',
+            "\x6",
         ];
+        yield '{{ \'\065\x64\' }} => \065\x64' => [
+            '{{ \'\065\x64\' }}',
+            "\065\x64",
+        ];
+        yield '{{ \'App\\\\Test\' }} => App\Test' => [
+            '{{ \'App\\\\Test\' }}',
+            'App\\Test',
+        ];
+        yield '{{ "App\#{var}" }} => App#{var}' => [
+            '{{ "App\#{var}" }}',
+            'App#{var}',
+        ];
+        yield '{{ \'foo \\\' bar\' }} => foo \' bar' => [
+            '{{ \'foo \\\' bar\' }}',
+            'foo \' bar',
+        ];
+        yield '{{ "foo \" bar" }} => foo " bar' => [
+            '{{ "foo \\" bar" }}',
+            'foo " bar',
+        ];
+        yield '{{ \'\f\n\r\t\v\' }} => \f\n\r\t\v' => [
+            '{{ \'\\f\\n\\r\\t\\v\' }}',
+            "\f\n\r\t\v",
+        ];
+        yield '{{ \'\\\\f\\\\n\\\\r\\\\t\\\\v\' }} => \\f\\n\\r\\t\\v' => [
+            '{{ \'\\\\f\\\\n\\\\r\\\\t\\\\v\' }}',
+            '\\f\\n\\r\\t\\v',
+        ];
+    }
 
-        $lexer = new Lexer(new Environment($this->createMock(LoaderInterface::class)));
-        foreach ($tests as $template => $expected) {
-            $stream = $lexer->tokenize(new Source($template, 'index'));
-            $stream->expect(Token::VAR_START_TYPE);
-            $stream->expect(Token::STRING_TYPE, $expected);
+    /**
+     * @group legacy
+     *
+     * @dataProvider getStringWithEscapedDelimiterProducingDeprecation
+     */
+    public function testStringWithEscapedDelimiterProducingDeprecation(string $template, string $expected, string $expectedDeprecation)
+    {
+        $this->expectDeprecation($expectedDeprecation);
 
-            // add a dummy assertion here to satisfy PHPUnit, the only thing we want to test is that the code above
-            // can be executed without throwing any exceptions
-            $this->addToAssertionCount(1);
-        }
+        $lexer = new Lexer(new Environment(new ArrayLoader()));
+        $stream = $lexer->tokenize(new Source($template, 'index'));
+        $stream->expect(Token::VAR_START_TYPE);
+        $stream->expect(Token::STRING_TYPE, $expected);
+
+        // add a dummy assertion here to satisfy PHPUnit, the only thing we want to test is that the code above
+        // can be executed without throwing any exceptions
+        $this->addToAssertionCount(1);
+    }
+
+    public static function getStringWithEscapedDelimiterProducingDeprecation()
+    {
+        yield '{{ \'App\Test\' }} => AppTest' => [
+            '{{ \'App\\Test\' }}',
+            'AppTest',
+            'Since twig/twig 3.12: Character "T" at position 5 should not be escaped; the "\" character is ignored in Twig v3 but will not be in v4. Please remove the extra "\" character.',
+        ];
+        yield '{{ "foo \\\' bar" }} => foo \' bar' => [
+            '{{ "foo \\\' bar" }}',
+            'foo \' bar',
+            'Since twig/twig 3.12: Character "\'" at position 6 should not be escaped; the "\" character is ignored in Twig v3 but will not be in v4. Please remove the extra "\" character.',
+        ];
+        yield '{{ \'foo \" bar\' }} => foo " bar' => [
+            '{{ \'foo \\" bar\' }}',
+            'foo " bar',
+            'Since twig/twig 3.12: Character """ at position 6 should not be escaped; the "\" character is ignored in Twig v3 but will not be in v4. Please remove the extra "\" character.',
+        ];
     }
 
     public function testStringWithInterpolation()
     {
         $template = 'foo {{ "bar #{ baz + 1 }" }}';
 
-        $lexer = new Lexer(new Environment($this->createMock(LoaderInterface::class)));
+        $lexer = new Lexer(new Environment(new ArrayLoader()));
         $stream = $lexer->tokenize(new Source($template, 'index'));
         $stream->expect(Token::TEXT_TYPE, 'foo ');
         $stream->expect(Token::VAR_START_TYPE);
@@ -222,7 +292,7 @@ class LexerTest extends TestCase
     {
         $template = '{{ "bar \#{baz+1}" }}';
 
-        $lexer = new Lexer(new Environment($this->createMock(LoaderInterface::class)));
+        $lexer = new Lexer(new Environment(new ArrayLoader()));
         $stream = $lexer->tokenize(new Source($template, 'index'));
         $stream->expect(Token::VAR_START_TYPE);
         $stream->expect(Token::STRING_TYPE, 'bar #{baz+1}');
@@ -237,7 +307,7 @@ class LexerTest extends TestCase
     {
         $template = '{{ "bar # baz" }}';
 
-        $lexer = new Lexer(new Environment($this->createMock(LoaderInterface::class)));
+        $lexer = new Lexer(new Environment(new ArrayLoader()));
         $stream = $lexer->tokenize(new Source($template, 'index'));
         $stream->expect(Token::VAR_START_TYPE);
         $stream->expect(Token::STRING_TYPE, 'bar # baz');
@@ -250,12 +320,12 @@ class LexerTest extends TestCase
 
     public function testStringWithUnterminatedInterpolation()
     {
+        $template = '{{ "bar #{x" }}';
+        $lexer = new Lexer(new Environment(new ArrayLoader()));
+
         $this->expectException(SyntaxError::class);
         $this->expectExceptionMessage('Unclosed """');
 
-        $template = '{{ "bar #{x" }}';
-
-        $lexer = new Lexer(new Environment($this->createMock(LoaderInterface::class)));
         $lexer->tokenize(new Source($template, 'index'));
     }
 
@@ -263,7 +333,7 @@ class LexerTest extends TestCase
     {
         $template = '{{ "bar #{ "foo#{bar}" }" }}';
 
-        $lexer = new Lexer(new Environment($this->createMock(LoaderInterface::class)));
+        $lexer = new Lexer(new Environment(new ArrayLoader()));
         $stream = $lexer->tokenize(new Source($template, 'index'));
         $stream->expect(Token::VAR_START_TYPE);
         $stream->expect(Token::STRING_TYPE, 'bar ');
@@ -284,7 +354,7 @@ class LexerTest extends TestCase
     {
         $template = '{% foo "bar #{ "foo#{bar}" }" %}';
 
-        $lexer = new Lexer(new Environment($this->createMock(LoaderInterface::class)));
+        $lexer = new Lexer(new Environment(new ArrayLoader()));
         $stream = $lexer->tokenize(new Source($template, 'index'));
         $stream->expect(Token::BLOCK_START_TYPE);
         $stream->expect(Token::NAME_TYPE, 'foo');
@@ -306,7 +376,7 @@ class LexerTest extends TestCase
     {
         $template = "{{ 1 and\n0}}";
 
-        $lexer = new Lexer(new Environment($this->createMock(LoaderInterface::class)));
+        $lexer = new Lexer(new Environment(new ArrayLoader()));
         $stream = $lexer->tokenize(new Source($template, 'index'));
         $stream->expect(Token::VAR_START_TYPE);
         $stream->expect(Token::NUMBER_TYPE, 1);
@@ -319,9 +389,6 @@ class LexerTest extends TestCase
 
     public function testUnterminatedVariable()
     {
-        $this->expectException(SyntaxError::class);
-        $this->expectExceptionMessage('Unclosed "variable" in "index" at line 3');
-
         $template = '
 
 {{
@@ -331,15 +398,15 @@ bar
 
 ';
 
-        $lexer = new Lexer(new Environment($this->createMock(LoaderInterface::class)));
+        $lexer = new Lexer(new Environment(new ArrayLoader()));
+
+        $this->expectException(SyntaxError::class);
+        $this->expectExceptionMessage('Unclosed "variable" in "index" at line 3');
         $lexer->tokenize(new Source($template, 'index'));
     }
 
     public function testUnterminatedBlock()
     {
-        $this->expectException(SyntaxError::class);
-        $this->expectExceptionMessage('Unclosed "block" in "index" at line 3');
-
         $template = '
 
 {%
@@ -349,14 +416,18 @@ bar
 
 ';
 
-        $lexer = new Lexer(new Environment($this->createMock(LoaderInterface::class)));
+        $lexer = new Lexer(new Environment(new ArrayLoader()));
+
+        $this->expectException(SyntaxError::class);
+        $this->expectExceptionMessage('Unclosed "block" in "index" at line 3');
+
         $lexer->tokenize(new Source($template, 'index'));
     }
 
     public function testOverridingSyntax()
     {
         $template = '[# comment #]{# variable #}/# if true #/true/# endif #/';
-        $lexer = new Lexer(new Environment($this->createMock(LoaderInterface::class)), [
+        $lexer = new Lexer(new Environment(new ArrayLoader()), [
             'tag_comment' => ['[#', '#]'],
             'tag_block' => ['/#', '#/'],
             'tag_variable' => ['{#', '#}'],
@@ -377,5 +448,56 @@ bar
         // add a dummy assertion here to satisfy PHPUnit, the only thing we want to test is that the code above
         // can be executed without throwing any exceptions
         $this->addToAssertionCount(1);
+    }
+
+    /**
+     * @dataProvider getTemplateForErrorsAtTheEndOfTheStream
+     */
+    public function testErrorsAtTheEndOfTheStream(string $template)
+    {
+        $lexer = new Lexer(new Environment(new ArrayLoader()));
+        set_error_handler(function () {
+            $this->fail('Lexer should not emit warnings.');
+        });
+        try {
+            $lexer->tokenize(new Source($template, 'index'));
+            $this->addToAssertionCount(1);
+        } finally {
+            restore_error_handler();
+        }
+    }
+
+    public static function getTemplateForErrorsAtTheEndOfTheStream()
+    {
+        yield ['{{ ='];
+        yield ['{{ ..'];
+    }
+
+    /**
+     * @dataProvider getTemplateForStrings
+     */
+    public function testStrings(string $expected)
+    {
+        $template = '{{ "'.$expected.'" }}';
+        $lexer = new Lexer(new Environment(new ArrayLoader()));
+        $stream = $lexer->tokenize(new Source($template, 'index'));
+        $stream->expect(Token::VAR_START_TYPE);
+        $stream->expect(Token::STRING_TYPE, $expected);
+
+        $template = "{{ '".$expected."' }}";
+        $lexer = new Lexer(new Environment(new ArrayLoader()));
+        $stream = $lexer->tokenize(new Source($template, 'index'));
+        $stream->expect(Token::VAR_START_TYPE);
+        $stream->expect(Token::STRING_TYPE, $expected);
+
+        // add a dummy assertion here to satisfy PHPUnit, the only thing we want to test is that the code above
+        // can be executed without throwing any exceptions
+        $this->addToAssertionCount(1);
+    }
+
+    public static function getTemplateForStrings()
+    {
+        yield ['日本では、春になると桜の花が咲きます。多くの人々は、公園や川の近くに集まり、お花見を楽しみます。桜の花びらが風に舞い、まるで雪のように見える瞬間は、とても美しいです。'];
+        yield ['في العالم العربي، يُعتبر الخط العربي أحد أجمل أشكال الفن. يُستخدم الخط في تزيين المساجد والكتب والمخطوطات القديمة. يتميز الخط العربي بجماله وتناسقه، ويُعتبر رمزًا للثقافة الإسلامية.'];
     }
 }

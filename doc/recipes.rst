@@ -300,6 +300,14 @@ does not return ``false``.
     As the resolution of functions/filters/tags is done during compilation,
     there is no overhead when registering these callbacks.
 
+.. warning::
+
+    As parsing a tag is specific to each tag (the syntax is free form), the
+    ``registerUndefinedTokenParserCallback()`` cannot be used to define a
+    default implementation for all unknown tags. It's mainly useful to override
+    the default exception or to register on the fly TokenParser instances for
+    specific known tags.
+
 Validating the Template Syntax
 ------------------------------
 
@@ -516,7 +524,7 @@ include in your templates:
     ``interpolateProvider`` service, for instance at the module initialization
     time:
 
-    ..  code-block:: javascript
+    .. code-block:: javascript
 
         angular.module('myApp', []).config(function($interpolateProvider) {
             $interpolateProvider.startSymbol('{[').endSymbol(']}');
@@ -527,5 +535,16 @@ include in your templates:
         $env->setLexer(new \Twig\Lexer($env, [
             'tag_variable' => ['{[', ']}'],
         ]));
+
+Marking a Node as being safe
+----------------------------
+
+When using the escaper extension, you might want to mark some nodes as being
+safe to avoid any escaping. You can do so by wrapping your expression with a
+``RawFilter`` node::
+
+    use Twig\Node\Expression\Filter\RawFilter;
+
+    $safeExpr = new RawFilter(new YourSafeNode());
 
 .. _callback: https://www.php.net/manual/en/function.is-callable.php

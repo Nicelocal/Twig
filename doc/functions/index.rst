@@ -10,7 +10,9 @@ Functions
     cycle
     date
     dump
+    enum_cases
     html_classes
+    html_cva
     include
     max
     min

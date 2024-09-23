@@ -14,7 +14,6 @@ namespace Twig\Tests\Node;
 use Twig\Environment;
 use Twig\Loader\ArrayLoader;
 use Twig\Node\BlockNode;
-use Twig\Node\Node;
 use Twig\Node\TextNode;
 use Twig\Test\NodeTestCase;
 
@@ -29,16 +28,19 @@ class BlockTest extends NodeTestCase
         $this->assertEquals('foo', $node->getAttribute('name'));
     }
 
-    public function getTests()
+    public static function provideTests(): iterable
     {
         $tests = [];
         $tests[] = [new BlockNode('foo', new TextNode('foo', 1), 1), <<<EOF
 // line 1
-public function block_foo(\$context, array \$blocks = [])
+/**
+ * @return iterable<null|scalar|\Stringable>
+ */
+public function block_foo(array \$context, array \$blocks = []): iterable
 {
     \$macros = \$this->macros;
     yield "foo";
-    return; yield '';
+    yield from [];
 }
 EOF
             , new Environment(new ArrayLoader()),

@@ -11,14 +11,15 @@ namespace Twig\Tests;
  * file that was distributed with this source code.
  */
 
+use Twig\DeprecatedCallableInfo;
 use Twig\Extension\AbstractExtension;
 use Twig\Extension\DebugExtension;
-use Twig\Extension\EscaperExtension;
 use Twig\Extension\SandboxExtension;
 use Twig\Extension\StringLoaderExtension;
 use Twig\Node\Expression\ConstantExpression;
 use Twig\Node\Node;
 use Twig\Node\PrintNode;
+use Twig\Runtime\EscaperRuntime;
 use Twig\Sandbox\SecurityPolicy;
 use Twig\Test\IntegrationTestCase;
 use Twig\Token;
@@ -48,7 +49,7 @@ class IntegrationTest extends IntegrationTestCase
         ];
     }
 
-    public function getFixturesDir()
+    protected static function getFixturesDirectory(): string
     {
         return __DIR__.'/Fixtures/';
     }
@@ -185,6 +186,7 @@ class TwigTestExtension extends AbstractExtension
             new TwigFunction('*_path', [$this, 'dynamic_path']),
             new TwigFunction('*_foo_*_bar', [$this, 'dynamic_foo']),
             new TwigFunction('anon_foo', function ($name) { return '*'.$name.'*'; }),
+            new TwigFunction('deprecated_function', function () { return 'foo'; }, ['deprecation_info' => new DeprecatedCallableInfo('foo/bar', '1.1', 'not_deprecated_function')]),
         ];
     }
 
@@ -216,7 +218,7 @@ class TwigTestExtension extends AbstractExtension
      */
     public function escape_and_nl2br($env, $value, $sep = '<br />')
     {
-        return $this->nl2br(EscaperExtension::escape($env, $value, 'html'), $sep);
+        return $this->nl2br($env->getRuntime(EscaperRuntime::class)->escape($value, 'html'), $sep);
     }
 
     /**
